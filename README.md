@@ -11,6 +11,7 @@ bash bubblejail.sh --stdir --video --audio -p firefox
 
 ## Commands
 -p | --program    after this the programname or path follows
+
 --debug           show all output written to stdout or stderr
 -h | --help       show help (not completed)
 --version         show version of bubblejail and bubblewrap
