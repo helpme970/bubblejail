@@ -17,6 +17,8 @@ debug=false
 xsession=""
 virt_home=false
 tmp_home=false
+clone=""
+
 for ((i=1 ; i<=$# ; i++ )); do
     arg=${!i}
     case "$arg" in
@@ -24,10 +26,10 @@ for ((i=1 ; i<=$# ; i++ )); do
             cmd="$cmd --setenv USER $user"
             if [[ $user == "root" ]]; then
                 new_home="/root"
-                cmd="$cmd --setenv $HOME /root"
+                cmd="$cmd --setenv HOME /root"
             elif [[ $user == "nobody" || $user == "$USER" || $user == "user" ]]; then
                 new_home="/home/$user"
-                cmd="$cmd --setenv $HOME /home/$user"
+                cmd="$cmd --setenv HOME /home/$user"
             fi
 
             #cmd="${cmd//"$HOME"/$new_home}"
@@ -36,7 +38,7 @@ for ((i=1 ; i<=$# ; i++ )); do
 
             ((i++))
             program="${!i}"
-            if [[ $program == *"/"* ]]; then
+            if [[ "$program" == *"/"* || "$program" == *"."* ]]; then
                 if [ -e "$(readlink -f ${!i})" ]; then
                     program="$(readlink -f ${!i})"
                 elif [ ! -e "$(readlink -f ${!i})" ]; then
@@ -50,20 +52,18 @@ for ((i=1 ; i<=$# ; i++ )); do
                     echo "The program is not executable. Change the permissions."
                     exit
                 fi
-                IFS='/' read -r -a array <<< "$program"
-                programname=${array[-1]}
+                if [[ "$program" == *"/"* ]]; then
+                    IFS='/' read -r -a array <<< "$program"
+                    programname=${array[-1]}
+                fi
+                if [[ "$program" == *"."* ]]; then
+                    IFS='.' read -r -a array <<< "${!i}"
+                    programname=${array[0]}
+                fi
             else
                 programname="$program"
             fi
             path="${program//$programname/}"
-
-            if [ $virt_home == true ]; then
-                cmd="$cmd --bind ~/.bubblejail/sandbox/$programname $new_home"
-            elif [ $tmp_home == true ]; then
-                cmd=" --tmpfs $new_home$cmd"
-            else
-                cmd=" --tmpfs $new_home$cmd"
-            fi
 
             if [[ $programname == *".appimage"* || $programname == *".Appimage"* ]]; then
                 if [ -e "$path/squashfs-root" ]; then
@@ -78,9 +78,52 @@ for ((i=1 ; i<=$# ; i++ )); do
                 fi
                 eval "$program --appimage-extract"
                 mv $path/squashfs-root $program
-
             fi
-            cmd="$cmd \"${!i}\""
+            if [ ${#copy} -gt 0 ]; then
+                IFS=';' read -ra copy <<< "$copy"
+                for l in "${copy[@]}"; do
+                    if [ -e "$HOME/.bubblejail/sandbox/$programname$l" ]; then
+                        echo "$HOME/.bubblejail/sandbox/$programname$l already exists"
+                        #exit
+                    elif [ ! -e "$HOME/.bubblejail/sandbox/$programname$l" ]; then
+                        echo "$HOME/.bubblejail/sandbox/$programname$l created"
+                        if [ -d "$l" ]; then
+                            IFS='/' read -r -a array <<< "$l"
+                            array="${array[-1]}"
+                            l2="${l//$array/ }"
+                            mkdir -p $HOME/.bubblejail/sandbox/$programname$l2
+                            cp -R "$l" "$HOME/.bubblejail/sandbox/$programname$l"
+                            echo cp1
+                        elif [ -f "$l" ]; then
+                            IFS='/' read -r -a array <<< "$l"
+                            array="${array[-1]}"
+                            l2="${l//$array/ }"
+                            mkdir -p $HOME/.bubblejail/sandbox/$programname$l2
+                            cp "$l" "$HOME/.bubblejail/sandbox/$programname$l"
+                            echo cp2
+                        else
+                            echo fehler
+                            exit
+                        fi
+                    else
+                        echo fehler
+                        exit
+                    fi
+                    old="$l"
+                    l="$HOME/.bubblejail/sandbox/$programname$l"
+                    cmd="$cmd --bind \"$l\" \"$old\""
+                done
+            fi
+
+            if [ $virt_home == true ]; then
+                cmd=" --bind ~/.bubblejail/sandbox/$programname / --bind ~/.bubblejail/sandbox/$programname/$new_home $new_home$cmd"
+            elif [ $tmp_home == true ]; then
+                cmd=" --tmpfs $new_home$cmd"
+            else
+                cmd=" --tmpfs $new_home$cmd"
+            fi
+
+            cmd="$cmd \"$program\""
             ((i++))
             cmd="$cmd ${@:i}"
             break
@@ -153,8 +196,7 @@ for ((i=1 ; i<=$# ; i++ )); do
             cmd="$cmd --dev-bind /dev/v4l /dev/v4l --dev-bind /dev/video0 /dev/video0"
         };;
         --stdir) {
-
-            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp"
+            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --ro-bind /opt /opt"
         };;
         --net|--share-net|--network) {
             cmd="$cmd --share-net --ro-bind /run/systemd/resolve /run/systemd/resolve"
@@ -207,8 +249,12 @@ for ((i=1 ; i<=$# ; i++ )); do
                             tmp="${!i}"
                         elif [ ! -e "${!i}" ]; then
                             echo "File ${!i} does not exist"
+                            exit
                         fi
                     fi
+                    i="${i// /\\ }"
+                    i="${i//(/\\(}"
+                    i="${i//)/\\)}"
                 };;
                 *) {
                     tmp="${!i}"
@@ -216,34 +262,73 @@ for ((i=1 ; i<=$# ; i++ )); do
             esac
             case "$arg" in
                 --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try) {            
-                    cmd="$cmd ${tmp} ${tmp}"
+                    cmd="$cmd \"${tmp}\" \"${tmp}\""
                 };;
                 --bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
-                    cmd="$cmd ${tmp}"
+                    cmd="$cmd \"${tmp}\""
                     ((i++))
-                    cmd="$cmd ${tmp}"
+                    cmd="$cmd \"${tmp}\""
                 };;
             esac
+        };;
+        --clone|--copy) {
+            ((i++))
+            if [ -e "$(readlink -f ${!i})" ]; then
+                tmp="$(readlink -f ${!i})"
+            elif [ ! -e "$(readlink -f ${!i})" ]; then
+                if [ -e "${!i}" ]; then
+                    tmp="${!i}"
+                elif [ ! -e "${!i}" ]; then
+                    echo "File ${!i} does not exist"
+                    exit
+                fi
+            fi
+            copy="$copy${tmp};"
         };;
         --tmpfs|--tmp) {
             cmd="$cmd --tmpfs"
             ((i++))
             cmd="$cmd ${!i}"
         };;
-        --unshare-user|--unshare-user-try|--unshare-ipc|--unshare-pid|--unshare-net|--unshare-uts|--unshare-cgroup|--unshare-cgroup-try) {
-            ::
-        };;
 
         --pass-lang) {
             cmd="$cmd --setenv LANGUAGE $LANGUAGE --setenv LANG $LANG"
         };;
+
+        ## bwrap parameter
+        # do nothing
+        --unshare-user|--unshare-user-try|--unshare-ipc|--unshare-pid|--unshare-net|--unshare-uts|--unshare-cgroup|--unshare-cgroup-try|--unshare-all|--clearenv|--new-session|--die-with-parent|--as-pid-1) {
+            ::
+        };;
+
+        # no parameter
+        --disable-userns|--assert-userns-disabled) {
+            cmd="$cmd $arg"
+        };;
+        
+        # one parameter
+        --args|--argv0|--userns|--userns2|--pidns|--uid|--gid|--hostname|--chdir|--unsetenv|--lock-file|--sync-fd|--remount-ro|--exec-label|--file-label|--proc|--dev|--tmpfs|--mqueue|--dir|--seccomp|--add-seccomp-fd|--block-fd|--userns-block-fd|--info-fd|--json-status-fd|--cap-add|--cap-drop|--perms|--size) {
+            cmd="$cmd $arg"
+            ((i++))
+            cmd="$cmd ${!i}"
+        };;
+
+        # two parameter
+        --setenv|--bind-fd|--ro-bind-fd|--file|--bind-data|--ro-bind-data|--symlink|--chmod) {
+            cmd="$cmd $arg"
+            ((i++))
+            cmd="$cmd ${!i}"
+            ((i++))
+            cmd="$cmd ${!i}"
+        };;
+
         *) {
             echo "Falsches Argument $arg"
         };;
     esac
 done
 
-cmd="bwrap --die-with-parent --as-pid-1 --new-session --unshare-all --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\"$cmd"
+cmd="bwrap --die-with-parent --as-pid-1 --new-session --unshare-all --unshare-cgroup --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\"$cmd"
 
 if [ $debug = false ]; then
     cmd="$cmd &> /dev/null"
