@@ -7,8 +7,24 @@ if [ $# -eq 0 ]; then
 fi
 
 mkdir -p $HOME/.bubblejail/sandbox
-mkdir -p $HOME/.bubblejail/profiles
-mkdir -p $HOME/.bubblejail/tmp
+#mkdir -p $HOME/.bubblejail/profiles
+#mkdir -p $HOME/.bubblejail/tmp
+
+if [[ ! -f $HOME/.bubblejail/tmp ]]; then
+    echo "" > $HOME/.bubblejail/tmp
+fi
+if [[ ! -f $HOME/.bubblejail/hostname ]]; then
+    echo "" > $HOME/.bubblejail/hostname
+fi
+if [[ ! -f $HOME/.bubblejail/os-release ]]; then
+    echo "" > $HOME/.bubblejail/os-release
+fi
+if [[ ! -f $HOME/.bubblejail/shadow ]]; then
+    echo "" > $HOME/.bubblejail/shadow
+fi
+if [[ ! -f $HOME/.bubblejail/shadow- ]]; then
+    echo "" > $HOME/.bubblejail/shadow-
+fi
 
 cmd=""
 #user="user"
@@ -116,7 +132,8 @@ for ((i=1 ; i<=$# ; i++ )); do
             fi
 
             if [ $virt_home == true ]; then
-                cmd=" --bind ~/.bubblejail/sandbox/$programname / --bind ~/.bubblejail/sandbox/$programname/$new_home $new_home$cmd"
+                mkdir -p $HOME/.bubblejail/sandbox/$programname$new_home
+                cmd=" --bind ~/.bubblejail/sandbox/$programname / --bind ~/.bubblejail/sandbox/$programname$new_home $new_home$cmd"
             elif [ $tmp_home == true ]; then
                 cmd=" --tmpfs $new_home$cmd"
             else
@@ -199,7 +216,7 @@ for ((i=1 ; i<=$# ; i++ )); do
             cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --ro-bind /opt /opt"
         };;
         --net|--share-net|--network) {
-            cmd="$cmd --share-net --ro-bind /run/systemd/resolve /run/systemd/resolve"
+            cmd="$cmd --share-net --ro-bind-try /run/systemd/resolve /run/systemd/resolve"
         };;
         --root) {
             cmd="$cmd --uid 0"
@@ -267,7 +284,7 @@ for ((i=1 ; i<=$# ; i++ )); do
                 --bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
                     cmd="$cmd \"${tmp}\""
                     ((i++))
-                    cmd="$cmd \"${tmp}\""
+                    cmd="$cmd \"${!i}\""
                 };;
             esac
         };;
@@ -298,7 +315,7 @@ for ((i=1 ; i<=$# ; i++ )); do
         ## bwrap parameter
         # do nothing
         --unshare-user|--unshare-user-try|--unshare-ipc|--unshare-pid|--unshare-net|--unshare-uts|--unshare-cgroup|--unshare-cgroup-try|--unshare-all|--clearenv|--new-session|--die-with-parent|--as-pid-1) {
-            ::
+            :
         };;
 
         # no parameter
