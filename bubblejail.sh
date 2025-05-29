@@ -95,10 +95,14 @@ for ((i=1 ; i<=$# ; i++ )); do
                     elif [ ! -e "$HOME/.bubblejail/sandbox/$programname$l" ]; then
                         echo "$HOME/.bubblejail/sandbox/$programname$l created"
                         if [ -d "$l" ]; then
+                            if [ "${l:$((${#l}-1)):1}" == "/" ]; then
+                                l=${l:$((${#l}-1))}
+                            fi
                             IFS='/' read -r -a array <<< "$l"
                             array="${array[-1]}"
                             l2="${l//$array/ }"
                             mkdir -p $HOME/.bubblejail/sandbox/$programname$l2
+                            #mkdir -p $HOME/.bubblejail/sandbox/$programname$l
                             cp -R "$l" "$HOME/.bubblejail/sandbox/$programname$l"
                             echo cp1
                         elif [ -f "$l" ]; then
@@ -371,28 +375,35 @@ fi
 
 echo "$cmd"
 
-if [[ $programname == *".appimage"* || $programname == *".Appimage"* || $programname == *".AppImage"* ]]; then
-    if [ "$xsession" != "" ]; then
-        echo "#!/bin/bash
-bash bubblejail.sh --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :\$xsession -br -fakescreenfps 30 -reset -terminate -once +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -2button -softCursor -resizeable -title bwrap -no-host-grab -screen 1900x1000 &
-echo lul
-sleep 0.2
-bash bubblejail.sh --stdir --x11 :\$xsession --debug -p openbox &
-eval '$cmd'" > $program-sandboxed/run-sandboxed.bash
+{ # try
+    if [[ $programname == *".appimage"* || $programname == *".Appimage"* || $programname == *".AppImage"* ]]; then
+        if [ "$xsession" != "" ]; then
+            echo "#!/bin/bash
+    bash bubblejail.sh --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :\$xsession -br -fakescreenfps 30 -reset -terminate -once +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -2button -softCursor -resizeable -title bwrap -no-host-grab -screen 1900x1000 &
+    echo lul
+    sleep 0.2
+    bash bubblejail.sh --stdir --x11 :\$xsession --debug -p openbox &
+    eval '$cmd'" > $program-sandboxed/run-sandboxed.bash
+        else
+            echo "#!/bin/bash
+    eval '$cmd'" > $program-sandboxed/run-sandboxed.bash
+        fi
     else
-        echo "#!/bin/bash
-eval '$cmd'" > $program-sandboxed/run-sandboxed.bash
+        if [ "$xsession" != "" ]; then
+            bash bubblejail.sh --stdir --video --gpu --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :$xsession -br -fakescreenfps 30 -reset -terminate -once +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -2button -softCursor -resizeable -title $programname -no-host-grab -screen 1920x1000 &
+            echo lul
+            #sleep 0.2
+            sleep 1
+            bash bubblejail.sh --stdir --x11 :$xsession --gpu --debug -p openbox &
+            sleep 1
+            eval "$cmd"
+        else
+            eval "$cmd"
+        fi
     fi
-else
-    if [ "$xsession" != "" ]; then
-        bash bubblejail.sh --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :$xsession -br -fakescreenfps 30 -reset -terminate -once +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -2button -softCursor -resizeable -title bwrap -no-host-grab -screen 1900x1000 &
-        echo lul
-        sleep 0.2
-        bash bubblejail.sh --stdir --x11 :$xsession --debug -p openbox &
-        eval "$cmd"
-    else
-        eval "$cmd"
-    fi
-fi
+} || { # catch
+    pkill -P $$
+    # save log for exception 
+}
 
 pkill -P $$
