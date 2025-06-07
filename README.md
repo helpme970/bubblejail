@@ -81,5 +81,7 @@ bash bubblejail.sh --stdir --video --audio -p firefox
 --pass-lang		  	pass the language into the sandbox
 
 +++++++++++++++++++++++++++++++++++++++++
+
 All bubblewrap command line arguments are supported by bubblejail
+
 +++++++++++++++++++++++++++++++++++++++++
