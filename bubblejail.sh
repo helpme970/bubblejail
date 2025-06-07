@@ -151,9 +151,10 @@ for ((i=1 ; i<=$# ; i++ )); do
                     cmd="$cmd --bind $program.config /home/$user/.config"
                 fi
                 eval "$path$programname --appimage-extract" > /dev/null
-                mv "${path}squashfs-root" "$program-sandboxed"
+                #mv "${path}squashfs-root" "$program-sandboxed"
+                mv "${pwd}squashfs-root" "$program-sandboxed"
                 debug=true
-                cmd="$cmd --bind \"\${\$(readlink \$0)//\$0/}\" \"\${\$(readlink \$0)//\$0/}\" ./AppRun"
+                cmd="$cmd --bind \"\${path//\$0/}\" \"\${path//\$0/}\" ./AppRun"
             else
                 cmd="$cmd \"$program\""
             fi
@@ -215,10 +216,10 @@ for ((i=1 ; i<=$# ; i++ )); do
             # ^ only needed for audio over network
 
             # Pipewire
-            #cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\""
+            cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\""
 
             # ALSA
-            #cmd="$cmd --dev-bind /dev/snd /dev/snd"
+            cmd="$cmd --dev-bind /dev/snd /dev/snd"
 
             # OSS
             #cmd="$cmd --dev-bind /dev/dsp /dev/dsp"
@@ -379,6 +380,7 @@ echo "$cmd"
     if [[ $programname == *".appimage"* || $programname == *".Appimage"* || $programname == *".AppImage"* ]]; then
         if [ "$xsession" != "" ]; then
             echo "#!/bin/bash
+    path=\"\$(readlink -f \$0)\"
     bash bubblejail.sh --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :\$xsession -br -fakescreenfps 30 -reset -terminate -once +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -2button -softCursor -resizeable -title bwrap -no-host-grab -screen 1900x1000 &
     echo lul
     sleep 0.2
@@ -386,6 +388,7 @@ echo "$cmd"
     eval '$cmd'" > $program-sandboxed/run-sandboxed.bash
         else
             echo "#!/bin/bash
+    path=\"\$(readlink -f \$0)\"
     eval '$cmd'" > $program-sandboxed/run-sandboxed.bash
         fi
     else
