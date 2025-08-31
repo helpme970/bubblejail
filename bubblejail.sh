@@ -26,13 +26,14 @@ if [[ ! -f $HOME/.bubblejail/shadow- ]]; then
     echo "" > $HOME/.bubblejail/shadow-
 fi
 
-cmd=""
+cmd=" --unshare-net --unshare-ipc"
 #user="user"
 user="$USER"
 debug=false
 xsession=""
-virt_home=false
-tmp_home=false
+virt_home=""
+tmp_home=""
+box=""
 userns=false
 clone=""
 
@@ -53,19 +54,25 @@ for ((i=1 ; i<=$# ; i++ )); do
 
             ((i++))
             program="${!i}"
-            if [[ "$program" == *"/"* || "$program" == *"."* ]]; then
-                if [ -e "$(readlink -f ${!i})" ]; then
-                    program="$(readlink -f ${!i})"
-                elif [ ! -e "$(readlink -f ${!i})" ]; then
-                    if [ -e "${!i}" ]; then
-                        program="${!i}"
-                    elif [ ! -e "${!i}" ]; then
-                        echo "Program ${!i} does not exist"
-                    fi
+            if [ "$box" != "" ]; then
+                box2="${box//--bind /}"
+                box2="${box2// \//}"
+                program2="$box2${!i}"
+            else
+                program2="$program"
+            fi
+            if [[ "$program2" == *"/"* || "$program2" == *"."* ]]; then
+                if [ -e "$(readlink -f "${program2}")" ]; then
+                    program2="$(readlink -f "${program2}")"
+                elif [ -e "$(readlink -f "${!i}")" ]; then
+                    program2="${!i}"
+                else
+                    echo "Program ${program2} does not exist"
+                    exit 1
                 fi
-                if [ ! -x "$program" ]; then
-                    echo "The program is not executable. Change the permissions."
-                    exit
+                if [ ! -x "$program2" ]; then
+                    echo "$program2 is not executable. Change the permissions."
+                    exit 1
                 fi
                 if [[ "${program:$((${#program}-1)):1}" == "/" ]]; then
                     program="${program[-1]}"
@@ -84,6 +91,21 @@ for ((i=1 ; i<=$# ; i++ )); do
                 #fi
             else
                 programname="$program"
+            fi
+
+            if [ $userns = false ]; then
+                cmd="$cmd --disable-userns"
+            fi
+
+            if [ "$virt_home" != "" ]; then
+                mkdir -p $HOME/.bubblejail/sandbox/$programname$new_home
+                cmd=" --bind ~/.bubblejail/sandbox/$programname /$cmd" #--bind ~/.bubblejail/sandbox/$programname$new_home $new_home$cmd"
+            elif [ "$tmp_home" != "" ]; then
+                cmd=" --tmpfs $new_home$cmd"
+            elif [ "$box" != "" ]; then
+                cmd=" $box$cmd"
+            else
+                cmd=" --tmpfs $new_home$cmd"
             fi
 
             if [ ${#copy} -gt 0 ]; then
@@ -114,11 +136,11 @@ for ((i=1 ; i<=$# ; i++ )); do
                             echo cp2
                         else
                             echo fehler
-                            exit
+                            exit 1
                         fi
                     else
                         echo fehler
-                        exit
+                        exit 1
                     fi
                     old="$l"
                     l="$HOME/.bubblejail/sandbox/$programname$l"
@@ -126,23 +148,10 @@ for ((i=1 ; i<=$# ; i++ )); do
                 done
             fi
 
-            if [ $virt_home == true ]; then
-                mkdir -p $HOME/.bubblejail/sandbox/$programname$new_home
-                cmd=" --bind ~/.bubblejail/sandbox/$programname / --bind ~/.bubblejail/sandbox/$programname$new_home $new_home$cmd"
-            elif [ $tmp_home == true ]; then
-                cmd=" --tmpfs $new_home$cmd"
-            else
-                cmd=" --tmpfs $new_home$cmd"
-            fi
-
-            if [ $userns = false ]; then
-                cmd="$cmd --disable-userns"
-            fi
-
             if [[ $programname = *".appimage"* || $programname = *".Appimage"* || $programname = *".AppImage"* ]]; then
                 if [ -e "$path/squashfs-root" ]; then
                     echo "$path/squashfs-root already exists, please remove it to continue"
-                    exit
+                    exit 1
                 fi
                 if [ -d "$program.home" ]; then
                     cmd="$cmd --bind $program.home /home/$user"
@@ -160,7 +169,16 @@ for ((i=1 ; i<=$# ; i++ )); do
             fi
 
             ((i++))
-            cmd="$cmd ${@:i}"
+            
+            for ((l=$i; l<=$#; l++)); do
+                a="${!l}"
+                #a="${a// /\\ }"
+                #a="${a//(/\\(}"
+                #a="${a//)/\\)}"
+                #a="${a//\'/\\\'}"
+                cmd="$cmd '$a'"
+            done
+            #cmd="$cmd ${@:i}"
             break
             break
         };;
@@ -207,11 +225,12 @@ for ((i=1 ; i<=$# ; i++ )); do
                     break
                 fi
             done
+            #cmd="$cmd --setenv DISPLAY ":0" --ro-bind /tmp/.X11-unix/X$xsession /tmp/.X11-unix/X0"
             cmd="$cmd --setenv DISPLAY ":$xsession" --ro-bind /tmp/.X11-unix/X$xsession /tmp/.X11-unix/X$xsession"
         };;
         --audio) {
             # PulseAudio
-            cmd="$cmd --ro-bind \"$XDG_RUNTIME_DIR/pulse/native\" \"$XDG_RUNTIME_DIR/pulse/native\""
+            cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pulse/native\" \"$XDG_RUNTIME_DIR/pulse/native\""
             # --ro-bind-try ~/.config/pulse/cookie ~/.config/pulse/cookie
             # ^ only needed for audio over network
 
@@ -219,10 +238,10 @@ for ((i=1 ; i<=$# ; i++ )); do
             cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\""
 
             # ALSA
-            cmd="$cmd --dev-bind /dev/snd /dev/snd"
+            cmd="$cmd --dev-bind-try /dev/snd /dev/snd"
 
             # OSS
-            #cmd="$cmd --dev-bind /dev/dsp /dev/dsp"
+            cmd="$cmd --dev-bind-try /dev/dsp /dev/dsp"
         };;
         --gpu) {
             cmd="$cmd --dev-bind /dev/dri /dev/dri --ro-bind /sys /sys" #/sys/devices/pci0000:00/ /sys/devices/pci0000:00/"
@@ -231,13 +250,18 @@ for ((i=1 ; i<=$# ; i++ )); do
             cmd="$cmd --dev-bind /dev/v4l /dev/v4l --dev-bind /dev/video0 /dev/video0"
         };;
         --stdir) {
-            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --bind $HOME/.bubblejail/hostname /etc/hostname --chmod 000 /etc/hostname --bind $HOME/.bubblejail/os-release /etc/os-release --chmod 000 /etc/os-release --bind $HOME/.bubblejail/tmp /etc/shadow --chmod 000 /etc/shadow --bind $HOME/.bubblejail/tmp /etc/shadow- --chmod 000 /etc/shadow- --bind $HOME/.bubblejail/tmp /usr/lib/os-release --chmod 000 /usr/lib/os-release --bind $HOME/.bubblejail/tmp /var/lib/dbus/machine-id --chmod 000 /var/lib/dbus/machine-id --bind $HOME/.bubblejail/tmp /etc/machine-id --chmod 000 /etc/machine-id --tmpfs /boot --chmod 000 /boot --tmpfs /usr/src --chmod 000 /usr/src --tmpfs /usr/lib/modules --chmod 000 /usr/lib/modules" # --tmpfs /lib/modules --chmod 000 /lib/modules
+            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --bind $HOME/.bubblejail/hostname /etc/hostname --chmod 000 /etc/hostname --bind $HOME/.bubblejail/os-release /etc/os-release --chmod 000 /etc/os-release --bind $HOME/.bubblejail/tmp /etc/shadow --chmod 000 /etc/shadow --bind $HOME/.bubblejail/tmp /etc/shadow- --chmod 000 /etc/shadow- --bind $HOME/.bubblejail/tmp /usr/lib/os-release --chmod 000 /usr/lib/os-release --bind $HOME/.bubblejail/tmp /var/lib/dbus/machine-id --chmod 000 /var/lib/dbus/machine-id --bind $HOME/.bubblejail/tmp /etc/machine-id --chmod 000 /etc/machine-id --tmpfs /usr/src --chmod 000 /usr/src --tmpfs /usr/lib/modules --chmod 000 /usr/lib/modules" # --tmpfs /lib/modules --chmod 000 /lib/modules --tmpfs /boot --chmod 000 /boot
         };;
         --enable-userns) {
             userns=true           
         };;
         --net|--share-net|--network) {
-            cmd="$cmd --share-net --ro-bind-try /run/systemd/resolve /run/systemd/resolve"
+            cmd="${cmd//--unshare-net/}"
+            cmd="$cmd --ro-bind-try /run/systemd/resolve /run/systemd/resolve"
+            #cmd="$cmd --share-net --ro-bind-try /run/systemd/resolve /run/systemd/resolve"
+        };;
+        --share-ipc) {
+            cmd="${cmd//--unshare-ipc/}"
         };;
         --root) {
             cmd="$cmd --uid 0"
@@ -251,10 +275,20 @@ for ((i=1 ; i<=$# ; i++ )); do
             user="$USER"
         };;
         --virt-home) {
-            virt_home=true
+            virt_home=" "
         };;
         --tmp-home) {
-            tmp_home=true
+            tmp_home=" "
+        };;
+        --box) {
+            ((i++))
+            if [ -e "$HOME/.bubblejail/sandbox/${!i}" ]; then
+                tmp="${!i}"
+            elif [ ! -e "$HOME/.bubblejail/sandbox/${!i}" ]; then
+                mkdir -p "$HOME/.bubblejail/sandbox/${!i}"
+                echo "Created new box ${!i}"
+            fi
+            box="--bind $HOME/.bubblejail/sandbox/${!i} /"
         };;
         --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try|--bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
             case $arg in
@@ -292,7 +326,7 @@ for ((i=1 ; i<=$# ; i++ )); do
                             tmp="${!i}"
                         elif [ ! -e "${!i}" ]; then
                             echo "File ${!i} does not exist"
-                            exit
+                            exit 1
                         fi
                     fi
                 };;
@@ -320,7 +354,7 @@ for ((i=1 ; i<=$# ; i++ )); do
                     tmp="${!i}"
                 elif [ ! -e "${!i}" ]; then
                     echo "File ${!i} does not exist"
-                    exit
+                    exit 1
                 fi
             fi
             copy="$copy${tmp};"
@@ -330,9 +364,14 @@ for ((i=1 ; i<=$# ; i++ )); do
             ((i++))
             cmd="$cmd ${!i}"
         };;
-
         --pass-lang) {
             cmd="$cmd --setenv LANGUAGE $LANGUAGE --setenv LANG $LANG"
+        };;
+        --usb) {
+            cmd="$cmd --bind /media /media --bind /mnt /mnt"
+        };;
+        --ro-usb) {
+            cmd="$cmd --ro-bind /media /media --ro-bind /mnt /mnt"
         };;
 
         ## bwrap parameter
@@ -364,11 +403,12 @@ for ((i=1 ; i<=$# ; i++ )); do
 
         *) {
             echo "Falsches Argument $arg"
+            exit 1
         };;
     esac
 done
 
-cmd="bwrap --die-with-parent --as-pid-1 --new-session --unshare-all --unshare-user --unshare-cgroup --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\"$cmd"
+cmd="bwrap --die-with-parent --as-pid-1 --unshare-user --unshare-cgroup --unshare-pid --unshare-uts --new-session --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\"$cmd"
 
 if [[ $debug == false ]]; then
     cmd="$cmd &> /dev/null"
@@ -376,16 +416,32 @@ fi
 
 echo "$cmd"
 
+final_cmd="#if [ -x \"\$\(command -v Xephyr\)\" ]; then
+    #echo noixe
+bash bubblejail.sh --stdir --video --gpu --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :$xsession -br -fakescreenfps 30 -reset -terminate -once +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -2button -softCursor -resizeable -title \"$programname\" -no-host-grab -screen 1920x1000 &
+#elif [ -x \"\$\(command -v Xnest\)\" ]; then
+    #bash bubblejail.sh --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xnest -geometry 1900x1000 -name $programname :\$xsession &
+#bash bubblejail.sh --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xpra &
+#else:
+    #echo \"No X11 Host found\"
+    #exit 1
+#fi
+
+#sleep 0.2
+sleep 0.2
+
+bash bubblejail.sh --stdir --x11 :$xsession --gpu --debug -p openbox &
+#bash bubblejail.sh --stdir --x11 :$xsession --gpu --debug -p bspwm &
+#bash bubblejail.sh --stdir --setenv DISPLAY ":0" --ro-bind /tmp/.X11-unix/X$xsession /tmp/.X11-unix/X0 --gpu --debug -p openbox &
+sleep 0.2
+eval \"$cmd\""
+
 { # try
     if [[ $programname == *".appimage"* || $programname == *".Appimage"* || $programname == *".AppImage"* ]]; then
         if [ "$xsession" != "" ]; then
             echo "#!/bin/bash
     path=\"\$(readlink -f \$0)\"
-    bash bubblejail.sh --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :\$xsession -br -fakescreenfps 30 -reset -terminate -once +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -2button -softCursor -resizeable -title bwrap -no-host-grab -screen 1900x1000 &
-    echo lul
-    sleep 0.2
-    bash bubblejail.sh --stdir --x11 :\$xsession --debug -p openbox &
-    eval '$cmd'" > $program-sandboxed/run-sandboxed.bash
+    eval $final_cmd" > $program-sandboxed/run-sandboxed.bash
         else
             echo "#!/bin/bash
     path=\"\$(readlink -f \$0)\"
@@ -393,20 +449,13 @@ echo "$cmd"
         fi
     else
         if [ "$xsession" != "" ]; then
-            bash bubblejail.sh --stdir --video --gpu --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :$xsession -br -fakescreenfps 30 -reset -terminate -once +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -2button -softCursor -resizeable -title $programname -no-host-grab -screen 1920x1000 &
-            echo lul
-            #sleep 0.2
-            sleep 1
-            bash bubblejail.sh --stdir --x11 :$xsession --gpu --debug -p openbox &
-            sleep 1
-            eval "$cmd"
+            eval "$final_cmd"
         else
             eval "$cmd"
         fi
     fi
 } || { # catch
     pkill -P $$
-    # save log for exception 
 }
 
 pkill -P $$
