@@ -7,12 +7,16 @@ if you find bugs you are welcome to report them to me.
 This is a simple bash wrapper for bubblewrap. It simplifies the commands for bubblewrap and adds some new functions, like appimage support.
 
 ## Dependencies
-Xephyr/Xnest
-openbox/bspwm
-bash
+Xephyr or Xnest as x11 host
+
+openbox or bspwm as window manager
+
+bash 
 
 ## Usage
+```
 bash bubblejail.sh --stdir --video --audio -p firefox
+```
 
 ## Commands
 ```
