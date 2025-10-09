@@ -15,7 +15,7 @@ bash
 
 ## Usage
 ```
-bash bubblejail.sh --stdir --video --audio -p firefox
+bash bubblejail.sh --stdir --video --net --audio -p firefox
 ```
 
 ## Commands
