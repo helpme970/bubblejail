@@ -6,8 +6,10 @@ if you find bugs you are welcome to report them to me.
 ## What is it
 This is a simple bash wrapper for bubblewrap. It simplifies the commands for bubblewrap and adds some new functions, like appimage support.
 
-## What is needed
-Xephyr and openbox must be installed for usahe of the x11 sandbox as well as bash, because the entire script is written in it.
+## Dependencies
+Xephyr/Xnest
+openbox/bspwm
+bash
 
 ## Usage
 bash bubblejail.sh --stdir --video --audio -p firefox
