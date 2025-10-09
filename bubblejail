@@ -149,6 +149,24 @@ for ((i=1 ; i<=$# ; i++ )); do
                 done
             fi
 
+            ########
+            # DBus #
+            ########
+            if [[ "$dbus" != "" ]]; then
+                mkdir -p $XDG_RUNTIME_DIR/xdg-dbus-proxy
+                for l in {0..50}; do
+                    if [ ! -e "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$l.sock" ]; then
+                        tmp="$l"
+                        break
+                    fi
+                done
+                xdg-dbus-proxy $DBUS_SESSION_BUS_ADDRESS $XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock --filter $dbus & # --log
+                cmd="$cmd --setenv DBUS_SESSION_BUS_ADDRESS unix:path="$XDG_RUNTIME_DIR"/bus --bind \"$XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock\" \"$XDG_RUNTIME_DIR/bus\""
+            fi
+            
+            ################
+            # program name #
+            ################
             if [[ $programname = *".appimage"* || $programname = *".Appimage"* || $programname = *".AppImage"* ]]; then
                 if [ -e "$path/squashfs-root" ]; then
                     echo "$path/squashfs-root already exists, please remove it to continue"
@@ -374,6 +392,13 @@ for ((i=1 ; i<=$# ; i++ )); do
         --ro-usb) {
             cmd="$cmd --ro-bind /media /media --ro-bind /mnt /mnt"
         };;
+        --dbus) {
+            ((i++))
+            dbus="$dbus --own=${!i}"
+        };;
+        --desktop-portal) {
+            dbus="$dbus --talk=org.freedesktop.portal.*"
+        };;
 
         ## bwrap parameter
         # do nothing
@@ -397,9 +422,9 @@ for ((i=1 ; i<=$# ; i++ )); do
         --setenv|--bind-fd|--ro-bind-fd|--file|--bind-data|--ro-bind-data|--symlink|--chmod) {
             cmd="$cmd $arg"
             ((i++))
-            cmd="$cmd ${!i}"
+            cmd="$cmd '${!i}'"
             ((i++))
-            cmd="$cmd ${!i}"
+            cmd="$cmd '${!i}'"
         };;
 
         *) {
@@ -411,11 +436,14 @@ done
 
 cmd="bwrap --die-with-parent --as-pid-1 --unshare-user --unshare-cgroup --unshare-pid --unshare-uts --new-session --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\"$cmd"
 
-if [[ $debug == false ]]; then
-    cmd="$cmd &> /dev/null"
+#if [[ $debug == false ]]; then
+#    cmd="$cmd &> /dev/null"
+#fi
+
+if [[ $debug == true ]]; then
+    echo "$cmd"
 fi
 
-echo "$cmd"
 
 { # try
     if [ "$xsession" != "" ]; then
