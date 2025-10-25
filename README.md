@@ -56,6 +56,8 @@ bash bubblejail.sh --stdir --video --net --audio -p firefox
 --tmpfs | --tmp  	              create temporary folder which is deleted after closing the program
 --pass-lang		  	              pass the language into the sandbox
 
+... and more but I am to lazy to add them
+
 +++++++++++++++++++++++++++++++++++++++++
 
 All bubblewrap command line arguments are supported by bubblejail
