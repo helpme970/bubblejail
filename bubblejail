@@ -12,7 +12,7 @@ if [[ ! -f $HOME/.bubblejail/tmp ]]; then
     echo "" > $HOME/.bubblejail/tmp
 fi
 
-cmd=" --unshare-ipc"
+cmd=" --unshare-net --unshare-ipc"
 #user="user" # option to change username in sandbox, maybe in the futur
 user="$USER"
 debug=false
@@ -261,9 +261,8 @@ for ((i=1 ; i<=$# ; i++ )); do
             userns=true           
         };;
         --net|--share-net|--network) {
-            #cmd="${cmd//--unshare-net/}"
+            cmd="${cmd//--unshare-net/}"
             cmd="$cmd --share-net --ro-bind-try /run/systemd/resolve /run/systemd/resolve"
-            #cmd="$cmd --share-net --ro-bind-try /run/systemd/resolve /run/systemd/resolve"
         };;
         --share-ipc) {
             cmd="${cmd//--unshare-ipc/}"
