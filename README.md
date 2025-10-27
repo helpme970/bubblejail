@@ -1,73 +1,99 @@
-# bubblejail
-This repo is mainly for me so that I don't delete it again by mistake
+## bubblejail
 
-if you find bugs you are welcome to report them to me.
+A lightweight Bash wrapper around **bubblewrap** that simplifies its command line and adds handy features such as AppImage support. This repository is primarily for personal use, but contributions and bug reports are welcome.
 
-## What is it
-This is a simple bash wrapper for bubblewrap. It simplifies the commands for bubblewrap and adds some new functions, like appimage support.
+---
 
-## Dependencies
-Xephyr or Xnest as x11 host
+### What is bubblejail?
 
-openbox or bspwm as window manager
+- Provides short, readable aliases for common bubblewrap options.  
+- Adds higher‑level helpers (e.g., automatic X11/Wayland handling, audio forwarding, sandboxed home directories).  
+- Fully compatible with all native bubblewrap arguments.
 
-bash 
+---
 
-## Installation
-Just download the bubblejail file, make it executable and execute it
+### Dependencies
 
-## Usage
-```
+| Component | Reason |
+|-----------|--------|
+| **Xephyr** or **Xnest** | X11 host for sandboxed graphical sessions |
+| **Openbox** or **bspwm** | Window manager inside the sandbox |
+| **bash** | Script interpreter |
+
+---
+
+### Installation
+
+1. Download `bubblejail.sh`.  
+2. Make it executable: `chmod +x bubblejail.sh`.  
+3. Run it directly or place it in a directory that’s on your `$PATH`.
+
+---
+
+### Basic Usage
+
+```bash
 bash bubblejail.sh --stdir --video --net --audio -p firefox
 ```
 
-## Commands
-```
--p | --program    	              after this the programname or path follows
--d | --debug           	          show all output written to stdout or stderr
--h | --help       	              show help (not completed)
--v | --version                    show version of bubblejail and bubblewrap
---video                           automaticly choose if x11 or wayland socket is shared to the application (needed for programs with gui)
---wayland                         share wayland socket to the sandbox
---x11                             share x11 socket to the sandbox
---x11 :10                         share the x11 socket for the 10th session
---x11-sandbox     	              create a new x11-session with Xephyr and start the program in it (see lack of x11)
---audio           	              automaticly share socket of PulseAudio, PipeWire, ALSA or OSS to allow audio playback and microphone access
---gpu             	              enable hardware acceleration for the sandbox
---cam | --webcam | --camera       enable access to the webcam (v4l or v4l2 must be installed)
---stdir           	              share important directories which are needed by all programs
---enable-userns | --share-userns  allow further namespaces in the sandbox environment
---share-ipc                       grant access to ipc (inter process communication)
---net | --share-net | --network   enable network access
---root            	              change uid to 0
---nobody          	              change uid to 65534 which is reserved for the user nobody
---current-user    	              change the user to the current one (default)
---virt-home		  	              run the program in an empty home which is permanently saved
---tmp-home		  	              create empty home which is deleted after closing the program
---box boxname                     create new sandbox called boxname to divert the root directorys of multiple programs
---pass SRC	     	              bind src to the exact same position in the sandbox
---ro-pass         	              same as --pass but read-only
---dev-pass        	              same as --pass but with device access
---pass-try        	              same as --pass but no error if path does not exists
---ro-pass-try     	              same as --pass-try but read-only
---dev-pass-try    	              same as --pass-try but with device access
---bind SRC DEST	 	              bind src to dest in the sandbox
---ro-bind SRC DEST                same as --bind but read-only
---dev-bind SRC DEST               same as --bind but with device access
---bind-try SRC DEST               same as --bind but no error if path does not exists
---ro-bind-try SRC DEST            same as --bind-try but read-only
---ro-bind-try SRC DEST            same as --bind-try but with device access
---clone | --copy  	              copy the file/directory into the sandbox at the sa,e location with write permissions
---tmpfs | --tmp  	              create temporary folder which is deleted after closing the sadnbox
---pass-lang		  	              pass the language into the sandbox
---usb                             pass all usb-drives with write access
---ro-usb                          same as --usb but read only
---dbus org.example.portal.*       grant the program the right to own dbus org.example.portal.*
---desktop-portal                  program can access files outside the sandbox securely (without exposing all files), open urls in browser, ...
+The example above launches **Firefox** with shared standard directories, video output, network access, and audio support.
 
-+++++++++++++++++++++++++++++++++++++++++
+---
 
-All bubblewrap command line arguments are supported by bubblejail
+### Command‑Line Options
 
-+++++++++++++++++++++++++++++++++++++++++
-```
+| Short / Long Flag | Description |
+|-------------------|-------------|
+| `-p, --program` | Followed by the program name or full path to execute. |
+| `-d, --debug` | Show all stdout/stderr output for troubleshooting. |
+| `-h, --help` | Display help information (still a work‑in‑progress). |
+| `-v, --version` | Print the versions of **bubblejail** and **bubblewrap**. |
+| `--video` | Auto‑detect and share the appropriate X11 or Wayland socket for GUI apps. |
+| `--wayland` | Explicitly share the Wayland socket. |
+| `--x11` | Share the default X11 socket. |
+| `--x11 :N` | Share the X11 socket of session *N* (e.g., `:10`). |
+| `--x11-sandbox` | Start a fresh X11 session with Xephyr and run the program inside it. |
+| `--audio` | Forward PulseAudio, PipeWire, ALSA, or OSS sockets for sound and mic access. |
+| `--gpu` | Enable hardware‑accelerated graphics inside the sandbox. |
+| `--cam`, `--webcam`, `--camera` | Grant access to the webcam (requires `v4l`/`v4l2`). |
+| `--stdir` | Bind essential system directories needed by most programs. |
+| `--enable-userns`, `--share-userns` | Allow additional user namespaces. |
+| `--share-ipc` | Permit inter‑process communication. |
+| `--net`, `--share-net`, `--network` | Enable network connectivity. |
+| `--root` | Run the sandbox as UID 0. |
+| `--nobody` | Run as UID 65534 (the “nobody” user). |
+| `--current-user` | Use the invoking user’s UID (default). |
+| `--virt-home` | Use a persistent empty home directory. |
+| `--tmp-home` | Use a temporary home that is removed on exit. |
+| `--box <name>` | Create an isolated root for multiple programs under *name*. |
+| `--pass <SRC>` | Bind *SRC* to the same path inside the sandbox (read‑write). |
+| `--ro-pass <SRC>` | Same as `--pass` but read‑only. |
+| `--dev-pass <SRC>` | Bind with device permissions. |
+| `--pass-try <SRC>` | Like `--pass` but ignore missing paths. |
+| `--ro-pass-try <SRC>` | Read‑only version of `--pass-try`. |
+| `--dev-pass-try <SRC>` | Device‑access version of `--pass-try`. |
+| `--bind <SRC> <DEST>` | Bind *SRC* to *DEST* inside the sandbox. |
+| `--ro-bind <SRC> <DEST>` | Read‑only bind. |
+| `--dev-bind <SRC> <DEST>` | Device‑access bind. |
+| `--bind-try <SRC> <DEST>` | Bind without error on missing source. |
+| `--ro-bind-try <SRC> <DEST>` | Read‑only version of `--bind-try`. |
+| `--dev-bind-try <SRC> <DEST>` | Device‑access version of `--bind-try`. |
+| `--clone`, `--copy` | Copy a file or directory into the sandbox with write permissions. |
+| `--tmpfs`, `--tmp` | Create a temporary directory that disappears when the sandbox stops. |
+| `--pass-lang` | Propagate the host’s locale settings. |
+| `--usb` | Pass all USB drives with write access. |
+| `--ro-usb` | Same as `--usb` but read‑only. |
+| `--dbus <pattern>` | Grant the program ownership of matching D‑Bus names (e.g., `org.example.portal.*`). |
+| `--desktop-portal` | Allow secure access to external files, opening URLs, etc., via the desktop portal. |
+
+> **All** native bubblewrap arguments are also accepted; they are passed through unchanged.
+
+---
+
+### Contributing
+
+- Report bugs via the **Issues** tab.  
+- Star the repository if you find it useful.  
+- Pull requests are welcome—especially improvements to documentation, new helper flags, or better handling of edge cases.
+
+---
