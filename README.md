@@ -6,9 +6,9 @@ A lightweight Bash wrapper around **bubblewrap** that simplifies its command lin
 
 ### What is bubblejail?
 
-- ✓ Provides short, readable aliases for common bubblewrap options.  
-- ✓ Adds higher‑level helpers (e.g., automatic X11/Wayland handling, audio forwarding, sandboxed home directories).  
-- ✓ Fully compatible with all native bubblewrap arguments.
+✓ Provides short, readable aliases for common bubblewrap options.  
+✓ Adds higher‑level helpers (e.g., automatic X11/Wayland handling, audio forwarding, sandboxed home directories).  
+✓ Fully compatible with all native bubblewrap arguments.
 
 ---
 
