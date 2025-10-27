@@ -12,7 +12,7 @@ if [[ ! -f $HOME/.bubblejail/tmp ]]; then
     echo "" > $HOME/.bubblejail/tmp
 fi
 
-cmd=" --unshare-net --unshare-ipc"
+cmd=" --unshare-ipc"
 #user="user" # option to change username in sandbox, maybe in the futur
 user="$USER"
 debug=false
@@ -187,7 +187,7 @@ for ((i=1 ; i<=$# ; i++ )); do
             break
             break
         };;
-        --debug) {
+        -d|--debug) {
             debug=true
         };;
         -h|--help) {    
@@ -261,8 +261,8 @@ for ((i=1 ; i<=$# ; i++ )); do
             userns=true           
         };;
         --net|--share-net|--network) {
-            cmd="${cmd//--unshare-net/}"
-            cmd="$cmd --ro-bind-try /run/systemd/resolve /run/systemd/resolve"
+            #cmd="${cmd//--unshare-net/}"
+            cmd="$cmd --share-net --ro-bind-try /run/systemd/resolve /run/systemd/resolve"
             #cmd="$cmd --share-net --ro-bind-try /run/systemd/resolve /run/systemd/resolve"
         };;
         --share-ipc) {
@@ -388,8 +388,12 @@ for ((i=1 ; i<=$# ; i++ )); do
 
         ## bwrap parameter
         # do nothing
-        --unshare-user|--unshare-user-try|--unshare-ipc|--unshare-pid|--unshare-net|--unshare-uts|--unshare-cgroup|--unshare-cgroup-try|--unshare-all|--clearenv|--new-session|--die-with-parent|--as-pid-1|--disable-userns|--assert-userns-disabled) {
+        --unshare-user|--unshare-user-try|--unshare-ipc|--unshare-pid|--unshare-net|--unshare-uts|--unshare-cgroup|--unshare-cgroup-try|--clearenv|--new-session|--die-with-parent|--disable-userns|--assert-userns-disabled) {
             echo "The parameter \"${!i}\" is already automaticaly used in bubblejail. You can remove it from your command because it does nothing."
+        };;
+
+        --unshare-all|--as-pid-1) {
+            cmd="$cmd $arg"
         };;
 
         # one parameter
