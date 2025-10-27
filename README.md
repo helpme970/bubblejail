@@ -13,6 +13,9 @@ openbox or bspwm as window manager
 
 bash 
 
+## Installation
+Just download the bubblejail file, make it executable and execute it
+
 ## Usage
 ```
 bash bubblejail.sh --stdir --video --net --audio -p firefox
