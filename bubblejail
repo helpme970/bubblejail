@@ -25,7 +25,6 @@ virt_home=""
 tmp_home=""
 box=""
 userns=false
-clone=""
 copy=""
 dbus=""
 chdir=""
