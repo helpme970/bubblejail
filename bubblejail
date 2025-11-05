@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # Exit if no argument is given
 if [ $# -eq 0 ]; then
 	echo "Bitte übergib den Programmnamen oder den Pfad zur Datei als Parameter"
@@ -7,6 +9,8 @@ if [ $# -eq 0 ]; then
 fi
 
 mkdir -p $HOME/.bubblejail/sandbox
+mkdir -p $HOME/.bubblejail/profiles
+
 
 if [[ ! -f $HOME/.bubblejail/tmp ]]; then
     echo "" > $HOME/.bubblejail/tmp
@@ -22,6 +26,9 @@ tmp_home=""
 box=""
 userns=false
 clone=""
+copy=""
+dbus=""
+chdir=""
 
 for ((i=1 ; i<=$# ; i++ )); do
     arg=${!i}
@@ -43,10 +50,16 @@ for ((i=1 ; i<=$# ; i++ )); do
             if [[ "$box" != "" && "$program" == *"/"* ]]; then
                 box2="${box//--bind /}"
                 box2="${box2// \//}"
-                program2="$box2${!i}"
+            fi
+
+            if [[ chdir != "" && "$program" == *"/"* ]]; then
+                program2="${box2}${chdir}${program}"
+            elif [[ "$box" != "" && "$program" == *"/"* ]]; then
+                program2="${box2}${!i}"
             else
                 program2="$program"
             fi
+
             if [[ "$program2" == *"/"* || "$program2" == *"."* ]]; then
                 if [ -e "$(readlink -f "${program2}")" ]; then
                     program2="$(readlink -f "${program2}")"
@@ -56,6 +69,7 @@ for ((i=1 ; i<=$# ; i++ )); do
                     program2="$HOME/.bubblejail/sandbox/$program2"
                 else
                     echo "Program ${program2} does not exist"
+                    exit 1
                 fi
                 if [ ! -x "$program2" ]; then
                     echo "$program2 is not executable. Change the permissions."
@@ -184,6 +198,16 @@ for ((i=1 ; i<=$# ; i++ )); do
                 cmd="$cmd \"$a\""
             done
             #cmd="$cmd ${@:i}"
+
+            # profiles
+            if [ -e "$HOME/.bubblejail/profiles/$programname" ]; then
+                cmd="bash \"$HOME/.bubblejail/profiles/$programname\""
+            else
+                # --as-pid-1
+                # PID 1 is the init system, e.g. systemd
+                cmd="bwrap --die-with-parent --unshare-user --unshare-cgroup --unshare-pid --unshare-uts --new-session --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\"$cmd"
+            fi
+
             break
             break
         };;
@@ -249,13 +273,16 @@ for ((i=1 ; i<=$# ; i++ )); do
             #cmd="$cmd --dev-bind-try /dev/dsp /dev/dsp"
         };;
         --gpu) {
-            cmd="$cmd --dev-bind /dev/dri /dev/dri --ro-bind /sys /sys" #/sys/devices/pci0000:00/ /sys/devices/pci0000:00/"
+            cmd="$cmd --dev-bind /dev/dri /dev/dri --ro-bind /sys/dev /sys/dev --ro-bind /sys/devices /sys/devices" # --ro-bind /sys /sys"
+        };;
+        --gpu) {
+            cmd="$cmd --dev-bind /dev/kvm /dev/kvm" #/sys/devices/pci0000:00/ /sys/devices/pci0000:00/"
         };;
         --cam|--webcam|--camera) { # v4l
             cmd="$cmd --dev-bind /dev/v4l /dev/v4l --dev-bind /dev/video0 /dev/video0"
         };;
         --stdir) {
-            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --bind $HOME/.bubblejail/tmp /etc/hostname --chmod 000 /etc/hostname --bind $HOME/.bubblejail/tmp /etc/os-release --chmod 000 /etc/os-release --bind $HOME/.bubblejail/tmp /etc/shadow --chmod 000 /etc/shadow --bind $HOME/.bubblejail/tmp /etc/shadow- --chmod 000 /etc/shadow- --bind $HOME/.bubblejail/tmp /usr/lib/os-release --chmod 000 /usr/lib/os-release --bind $HOME/.bubblejail/tmp /var/lib/dbus/machine-id --chmod 000 /var/lib/dbus/machine-id --bind $HOME/.bubblejail/tmp /etc/machine-id --chmod 000 /etc/machine-id --tmpfs /usr/src --chmod 000 /usr/src --tmpfs /usr/lib/modules --chmod 000 /usr/lib/modules" # --tmpfs /lib/modules --chmod 000 /lib/modules --tmpfs /boot --chmod 000 /boot
+            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --bind $HOME/.bubblejail/tmp /etc/hostname --chmod 000 /etc/hostname --bind $HOME/.bubblejail/tmp /etc/os-release --chmod 000 /etc/os-release --bind $HOME/.bubblejail/tmp /etc/shadow --chmod 000 /etc/shadow --bind $HOME/.bubblejail/tmp /etc/shadow- --chmod 000 /etc/shadow- --bind $HOME/.bubblejail/tmp /usr/lib/os-release --chmod 000 /usr/lib/os-release --bind $HOME/.bubblejail/tmp /var/lib/dbus/machine-id --chmod 000 /var/lib/dbus/machine-id --bind $HOME/.bubblejail/tmp /etc/machine-id --chmod 000 /etc/machine-id --tmpfs /usr/src --chmod 000 /usr/src --tmpfs /usr/lib/modules --chmod 000 /usr/lib/modules --tmpfs /usr/lib/gcc"
         };;
         --enable-userns|--share-userns) {
             userns=true           
@@ -413,6 +440,7 @@ for ((i=1 ; i<=$# ; i++ )); do
                     exit 1
                 fi
             fi
+            chdir="$tmp"
             cmd="$cmd --chdir \"$tmp\""
         };;
 
@@ -432,10 +460,6 @@ for ((i=1 ; i<=$# ; i++ )); do
     esac
 done
 
-# --as-pid-1
-# PID 1 is the init system, e.g. systemd
-cmd="bwrap --die-with-parent --unshare-user --unshare-cgroup --unshare-pid --unshare-uts --new-session --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\"$cmd"
-
 #if [[ $debug == false ]]; then
 #    cmd="$cmd &> /dev/null"
 #fi
@@ -449,7 +473,7 @@ fi
     if [ "$xsession" != "" ]; then
         final_cmd="
 if command -v Xephyr &> /dev/null; then
-    bash $0 --stdir --video --gpu --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :$xsession -br -fakescreenfps 30 -reset -terminate -once +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -2button -softCursor -resizeable -title \"$programname\" -no-host-grab -screen 1920x1000 &
+    bash $0 --stdir --video --gpu --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :$xsession -br -fakescreenfps 60 -reset -terminate -once +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -2button -softCursor -resizeable -title \"$programname\" -no-host-grab -screen 1920x1080 &
 elif command -v xpra &> /dev/null; then
     bash $0 --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xpra &
 elif command -v Xnest &> /dev/null; then
