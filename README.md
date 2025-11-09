@@ -46,7 +46,7 @@ The example above launches **Firefox** with shared standard directories, video o
 |-------------------|-------------|
 | `-p, --program` | Followed by the program name or full path to execute. |
 | `-d, --debug` | Show all stdout/stderr output for troubleshooting. |
-| `-h, --help` | Display help information (still a work‑in‑progress). |
+| `-h, --help` | Display help information. |
 | `-v, --version` | Print the versions of **bubblejail** and **bubblewrap**. |
 | `--video` | Auto‑detect and share the appropriate X11 or Wayland socket for GUI apps. |
 | `--wayland` | Explicitly share the Wayland socket. |
