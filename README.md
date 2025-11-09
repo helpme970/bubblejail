@@ -19,6 +19,7 @@ A lightweight Bash wrapper around **bubblewrap** that simplifies its command lin
 | **Xephyr** or **Xnest** | X11 host for sandboxed graphical sessions |
 | **Openbox** or **bspwm** | Window manager inside the sandbox |
 | **bash** | Script interpreter |
+| **bubblewrap** | backend |
 
 ---
 
