@@ -4,8 +4,8 @@ set -euo pipefail
 
 # Exit if no argument is given
 if [ $# -eq 0 ]; then
-	echo "Bitte übergib den Programmnamen oder den Pfad zur Datei als Parameter"
-	exit 1
+    echo "Bitte übergib den Programmnamen oder den Pfad zur Datei als Parameter"
+    exit 1
 fi
 
 mkdir -p $HOME/.bubblejail/sandbox
@@ -46,12 +46,13 @@ for ((i=1 ; i<=$# ; i++ )); do
 
             ((i++))
             program="${!i}"
+            box2=""
             if [[ "$box" != "" && "$program" == *"/"* ]]; then
                 box2="${box//--bind /}"
                 box2="${box2// \//}"
             fi
 
-            if [[ chdir != "" && "$program" == *"/"* ]]; then
+            if [[ chdir != "" && "$program" == *"/"* && "$box2" != "" ]]; then
                 program2="${box2}${chdir}${program}"
             elif [[ "$box" != "" && "$program" == *"/"* ]]; then
                 program2="${box2}${!i}"
@@ -214,12 +215,57 @@ for ((i=1 ; i<=$# ; i++ )); do
             debug=true
         };;
         -h|--help) {    
-            echo "help"
+            echo "Usage: bubblejail.sh [OPTIONS] -p PROGRAM
+
+-p, --program                       Followed by the program name or full path to execute.
+-d, --debug                         Show all stdout/stderr output for troubleshooting.
+-h, --help                          Display help information (still a work‑in‑progress).
+-v, --version                       Print the versions of bubblejail and bubblewrap.
+--video                             Auto‑detect and share the appropriate X11 or Wayland socket for GUI apps.
+--wayland                           Explicitly share the Wayland socket.
+--x11                               Share the default X11 socket.
+--x11 :N                            Share the X11 socket of session N (e.g., :10).
+--x11-sandbox                       Start a fresh X11 session with Xephyr and run the program inside it.
+--audio                             Forward PulseAudio, PipeWire, ALSA, or OSS sockets for sound and mic access.
+--gpu                               Enable hardware‑accelerated graphics inside the sandbox.
+--cam, --webcam, --camera           Grant access to the webcam (requires v4l/v4l2).
+--stdir                             Bind essential system directories needed by most programs.
+--enable-userns, --share-userns     Allow additional user namespaces.
+--share-ipc                         Permit inter‑process communication.
+--net, --share-net, --network       Enable network connectivity.
+--root                              Run the sandbox as UID 0.
+--nobody                            Run as UID 65534 (the “nobody” user).
+--current-user                      Use the invoking user’s UID (default).
+--virt-home                         Use a persistent empty home directory.
+--tmp-home                          Use a temporary home that is removed on exit.
+--box <name>                        Create an isolated root for multiple programs under name.
+--pass <SRC>                        Bind SRC to the same path inside the sandbox (read‑write).
+--ro-pass <SRC>                     Same as --pass but read‑only.
+--dev-pass <SRC>                    Bind with device permissions.
+--pass-try <SRC>                    Like --pass but ignore missing paths.
+--ro-pass-try <SRC>                 Read‑only version of --pass-try.
+--dev-pass-try <SRC>                Device‑access version of --pass-try.
+--bind <SRC> <DEST>                 Bind SRC to DEST inside the sandbox.
+--ro-bind <SRC> <DEST>              Read‑only bind.
+--dev-bind <SRC> <DEST>             Device‑access bind.
+--bind-try <SRC> <DEST>             Bind without error on missing source.
+--ro-bind-try <SRC> <DEST>          Read‑only version of --bind-try.
+--dev-bind-try <SRC> <DEST>         Device‑access version of --bind-try.
+--clone, --copy                     Copy a file or directory into the sandbox with write permissions.
+--tmpfs, --tmp                      Create a temporary directory that disappears when the sandbox stops.
+--pass-lang                         Propagate the host’s locale settings.
+--usb                               Pass all USB drives with write access.
+--ro-usb                            Same as --usb but read‑only.
+--dbus <pattern>                    Grant the program ownership of matching D‑Bus names (e.g., org.example.portal.*).
+--desktop-portal                    Allow secure access to external files, opening URLs, etc., via the desktop portal."
             exit
         };;
         -v|--version) {
-            echo "Bubblejail: 1.0"
+            echo "bubblejail 1.0"
             bwrap --version
+            echo "
+Released under the GPL-3.0 license
+bubblejail is created by helpme970"
             exit
         };;
         --video) {
