@@ -24,8 +24,8 @@ A lightweight Bash wrapper around **bubblewrap** that simplifies its command lin
 
 ### Installation
 
-1. Download `bubblejail.sh`.  
-2. Make it executable: `chmod +x bubblejail.sh`.  
+1. Download `bubblejail`.  
+2. Make it executable: `chmod +x bubblejail`.  
 3. Run it directly or place it in a directory that’s on your `$PATH`.
 
 ---
@@ -33,7 +33,7 @@ A lightweight Bash wrapper around **bubblewrap** that simplifies its command lin
 ### Basic Usage
 
 ```bash
-bash bubblejail.sh --stdir --video --net --audio -p firefox
+bash bubblejail --stdir --video --net --audio -p firefox
 ```
 
 The example above launches **Firefox** with shared standard directories, video output, network access, and audio support.
