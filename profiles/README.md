@@ -1,23 +1,54 @@
-# Important
-All profiles must be in the same directory as the bubblejail.sh file.
+# Bubblejail Scripts
 
-zenity is needed for the GUI of discord.sh and tor.sh.
+Welcome to the **Bubblejail** scripts!  
+This repository contains scripts for securely running applications like Discord and the Tor-Browser in an isolated environment.
 
-# How to run
-```
+---
+
+## 💡 Important Notes
+
+- **All profile files must be located in the same directory as `bubblejail.sh`.**
+- [`zenity`](https://help.gnome.org/users/zenity/stable/) is required for the GUI support in `discord.sh` and `tor.sh`.
+
+---
+
+## 🚀 How to Run
+
+```sh
 bash discord.sh
 ```
+> Replace `discord.sh` with the script you want to run.
 
-# Command line arguments
---no-audio | --disable-audio  deactivate access to audio device
+---
 
---audio | --enable-audio      enable access to audio device
+## ⚙️ Command Line Arguments
 
---x11-sandbox | --disable-x11  run in x11 sandbox
+### General Options
 
---x11 | --enable-x11          run on host x11 sessiob
+| Argument                 | Description                                  |
+|--------------------------|----------------------------------------------|
+| `--no-audio`<br>`--disable-audio`     | Disable access to audio device            |
+| `--audio`<br>`--enable-audio`         | Enable access to audio device             |
+| `--x11-sandbox`<br>`--disable-x11`    | Run in X11 sandbox mode                   |
+| `--x11`<br>`--enable-x11`             | Run on host X11 session                   |
 
-### only for tor.sh
---new-session                 run without settings and delete verything after exit
+### Only for `tor.sh`
 
---settings                    run with settings and dont delete after exit
+| Argument         | Description                                                        |
+|------------------|--------------------------------------------------------------------|
+| `--new-session`  | Run without user settings and delete everything after exit         |
+| `--settings`     | Run with user settings and keep them after exit                    |
+
+---
+
+## 📦 Dependencies
+
+- [`zenity`](https://help.gnome.org/users/zenity/stable/)
+- Bash shell
+
+---
+
+## 📝 Additional Information
+
+- Make sure all profiles and settings files are in the correct directory.
+- Options may be combined—see the source code for more details.
