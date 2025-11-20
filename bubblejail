@@ -52,13 +52,9 @@ for ((i=1 ; i<=$# ; i++ )); do
                 box2="${box2// \//}"
             fi
 
-            if [[ chdir != "" && "$program" == *"/"* && "$box2" != "" ]]; then
-                program2="${box2}${chdir}${program}"
-            elif [[ "$box" != "" && "$program" == *"/"* ]]; then
-                program2="${box2}${!i}"
-            else
-                program2="$program"
-            fi
+            #if [[ "$program" == *"/"* ]]; then
+            program2="${box2}${chdir}${program}"
+            #fi
 
             if [[ "$program2" == *"/"* || "$program2" == *"."* ]]; then
                 if [ -e "$(readlink -f "${program2}")" ]; then
@@ -81,8 +77,12 @@ for ((i=1 ; i<=$# ; i++ )); do
                 if [[ "$program" == *"/"* ]]; then
                     IFS='/' read -r -a array <<< "$program"
                     programname=${array[-1]}
+                    path="${program//$programname/}"
+                else
+                    programname="$program"
+                    path="${PWD}"
                 fi
-                path="${program//$programname/}"
+                
                 #if [[ "$program" == *"."* ]]; then
                 #    IFS='.' read -r -a array <<< "${!i}"
                 #    for ((i=0; i < ${#array}; i++)); do
@@ -104,7 +104,7 @@ for ((i=1 ; i<=$# ; i++ )); do
             elif [ "$tmp_home" != "" ]; then
                 cmd=" --tmpfs $new_home$cmd"
             elif [ "$box" != "" ]; then
-                cmd=" $box$cmd"
+                cmd=" ${box}${cmd}"
             else
                 cmd=" --tmpfs $new_home$cmd"
             fi
@@ -444,10 +444,10 @@ bubblejail is created by helpme970"
             cmd="$cmd --setenv LANGUAGE $LANGUAGE --setenv LANG $LANG"
         };;
         --usb) {
-            cmd="$cmd --bind /media /media --bind /mnt /mnt"
+            cmd="$cmd --bind-try /media /media --bind-try /mnt /mnt --bind-try /run/media /run/media"
         };;
         --ro-usb) {
-            cmd="$cmd --ro-bind /media /media --ro-bind /mnt /mnt"
+            cmd="$cmd --ro-bind-try /media /media --ro-bind-try /mnt /mnt --ro-bind-try /run/media /run/media"
         };;
         --dbus) {
             ((i++))
@@ -518,7 +518,7 @@ fi
     if [ "$xsession" != "" ]; then
         final_cmd="
 if command -v Xephyr &> /dev/null; then
-    bash $0 --stdir --video --gpu --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :$xsession -br -fakescreenfps 60 -reset -terminate -once +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -2button -softCursor -resizeable -title \"$programname\" -no-host-grab -screen 1920x1080 &
+    bash $0 --stdir --video --gpu --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :$xsession -br +bs -c -fakescreenfps 1 -r -reset -xinerama -terminate -once +extension XFIXES +extension RENDER +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -resizeable -title \"$programname\" -no-host-grab -screen 1920x1080 & # -2button -softCursor
 elif command -v xpra &> /dev/null; then
     bash $0 --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xpra &
 elif command -v Xnest &> /dev/null; then
@@ -531,9 +531,9 @@ fi
 sleep 0.2
 
 if command -v bspwm &> /dev/null; then
-    bash $0 --stdir --x11 :$xsession --gpu --debug -p bspwm &
+    bash $0 --stdir --x11 :$xsession --gpu --debug -p vglrun bspwm &
 elif command -v openbox &> /dev/null; then
-    bash $0 --stdir --x11 :$xsession --gpu --debug -p openbox &
+    bash $0 --stdir --x11 :$xsession --gpu --debug -p vglrun openbox &
 else
     echo \"No Desktop found\"
     exit 1
@@ -563,7 +563,11 @@ sleep 0.2"
         fi
     fi
 } || { # catch
-    pkill -P $$
+    :
 }
+
+if [ "$xsession" != "" ]; then
+    rm -f /tmp/.X11-unix/X$xsession
+fi
 
 pkill -P $$
