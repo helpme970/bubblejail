@@ -1,0 +1,80 @@
+#!/bin/bash
+
+cmd="bash bubblejail --stdir --debug --box umu --ro-pass ./ --enable-userns --setenv PATH "$PATH" --gpu --setenv LD_LIBRARY_PATH /lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu --tmpfs $XDG_RUNTIME_DIR --ro-pass /etc/machine-id --video --audio --share-ipc --setenv WINEDEBUG \"-all\""
+# --setenv PLATFORM /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/i386-linux-gnu-detect-platform
+
+if [ $# -gt 0 ]; then
+    for ((i=1 ; i<=$# ; i++ )); do
+        arg=${!i}
+        case "$arg" in
+            --no-audio|--disable-audio) {
+                cmd="${cmd//--audio/}"
+            };;
+            --x11-sandbox|--disable-x11) {
+                cmd="${cmd//--video/--x11-sandbox}"
+            };;
+            --net) {
+                cmd="$cmd --net"
+            };;
+            --xdg-runtime-dir) {
+                cmd="${cmd//--tmpfs $XDG_RUNTIME_DIR/--ro-pass $XDG_RUNTIME_DIR}"
+            };;
+            --devices) {
+                cmd="$cmd --dev-pass /dev"
+            };;
+            --usb) {
+                cmd="${cmd} --usb"
+            };;
+            --ro-usb) {
+                cmd="${cmd} --ro-usb"
+            };;
+            --log|--logging) {
+                cmd="$cmd --setenv PROTONLOG 1"
+            };;
+            --no-fsync) {
+                cmd="$cmd --setenv PROTON_NO_FSYNC 1"
+            };;
+            --sandbox) {
+                sandbox=true
+            };;
+            --desktop-portal) {
+                cmd="$cmd --desktop-portal"
+            };;
+            *) {
+                if [ "$WINEPREFIX" == "" ]; then
+                    if [[ "$arg" == *"$HOME/Games/"* ]]; then
+                        WINEPREFIX="${arg//$HOME\/Games\//}"
+                        IFS='/' read -r -a array <<< "$WINEPREFIX"
+                        WINEPREFIX=${array[0]}
+                    else
+                        WINEPREFIX="$arg"
+                    fi
+                fi
+                cmd="$cmd --setenv WINEPREFIX '$HOME/Games/$WINEPREFIX'"
+
+                if [ "$PROTON_LOG" != "" ]; then
+                    cmd="$cmd --setenv PROTONLOG $PROTON_LOG"
+                fi
+                if [ "$PROTON_NO_FSYNC" != "" ]; then
+                    cmd="$cmd --setenv PROTON_NO_FSYNC '$PROTON_NO_FSYNC'"
+                fi
+                if [ "$WINEDLLOVERWRITES" != "" ]; then
+                    cmd="$cmd --setenv WINEDLLOVERRIDES '$WINEDLLOVERWRITES'"
+                fi
+                if [ "$WINEDLLOVERRIDES" != "" ]; then
+                    cmd="$cmd --setenv WINEDLLOVERRIDES '$WINEDLLOVERRIDES'"
+                fi
+                cmd="$cmd -p umu/umu-run '$arg'" #--setenv PROTON_LOG_DIR ~
+                ((i++))
+                for ((l=$i; l<=$#; l++)); do
+                    cmd="$cmd '${!l}'"
+                done
+                break
+            };;
+        esac
+    done
+fi
+#eval "WINEPREFIX=\"$WINEPREFIX\" bash umu-sandbox winetricks settings sandbox"
+echo "$cmd"
+
+eval "$cmd"
