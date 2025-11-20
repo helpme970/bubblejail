@@ -1,6 +1,6 @@
 ## bubblejail
 
-A lightweight Bash wrapper around **bubblewrap** that simplifies its command line and adds handy features such as AppImage support. This repository is primarily for personal use, but contributions and bug reports are welcome.
+A lightweight Bash wrapper around **bubblewrap** that simplifies its command line and adds handy features such as AppImage support. Contributions and bug reports are welcome.
 
 ---
 
@@ -19,7 +19,8 @@ A lightweight Bash wrapper around **bubblewrap** that simplifies its command lin
 | **Xephyr** or **Xnest** | X11 host for sandboxed graphical sessions |
 | **Openbox** or **bspwm** | Window manager inside the sandbox |
 | **bash** | Script interpreter |
-| **bubblewrap** | backend |
+| **[virtualgl](https://github.com/VirtualGL/virtualgl)** | OpenGL support in X11-Sandbox |
+| **[bubblewrap](https://github.com/containers/bubblewrap)** | backend |
 
 ---
 
