@@ -208,7 +208,7 @@ for ((i=1 ; i<=$# ; i++ )); do
             debug=true
         };;
         -h|--help) {    
-            echo "Usage: bubblejail.sh [OPTIONS] -p PROGRAM
+            echo "Usage: $0 [OPTIONS] -p PROGRAM
 
 -p, --program                       Followed by the program name or full path to execute.
 -d, --debug                         Show all stdout/stderr output for troubleshooting.
