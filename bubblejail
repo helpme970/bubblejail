@@ -28,6 +28,7 @@ userns=false
 copy=""
 dbus=""
 chdir=""
+programname=""
 
 for ((i=1 ; i<=$# ; i++ )); do
     arg=${!i}
@@ -278,22 +279,33 @@ bubblejail is created by helpme970"
         };;
         --x11) {
             ((i++))
-            if [[ "${!i}" == *":"* ]]; then
-                cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i:1} /tmp/.X11-unix/X${!i:1}"
+            if [[ -e /tmp/.X11-unix/X0 ]]; then
+                if [[ "${!i}" == *":"* ]]; then
+                    cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i:1} /tmp/.X11-unix/X${!i:1}"
+                else
+                    i=$(($i-1))
+                    cmd="$cmd --setenv DISPLAY ":0" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
+                fi
             else
-                i=$(($i-1))
-                cmd="$cmd --setenv DISPLAY ":0" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
+                echo "X11 not running, cannot be used as compositor"
+                exit 1
             fi
         };;
         --x11-sandbox) {
+            xsession=""
             for l in {0..50}; do
                 if [ ! -e "/tmp/.X11-unix/X$l" ]; then
                     xsession="$l"
                     break
                 fi
             done
-            #cmd="$cmd --setenv DISPLAY ":0" --ro-bind /tmp/.X11-unix/X$xsession /tmp/.X11-unix/X0"
-            cmd="$cmd --setenv DISPLAY ":$xsession" --ro-bind /tmp/.X11-unix/X$xsession /tmp/.X11-unix/X$xsession"
+            if [[ "$xsession" != "" ]]; then
+                #cmd="$cmd --setenv DISPLAY ":0" --ro-bind /tmp/.X11-unix/X$xsession /tmp/.X11-unix/X0"
+                cmd="$cmd --setenv DISPLAY ":$xsession" --ro-bind /tmp/.X11-unix/X$xsession /tmp/.X11-unix/X$xsession"
+            else
+                echo "Cannot create X11-Session, to many sesssions already in use"
+                exit 1
+            fi
         };;
         --audio) {
             # PulseAudio
@@ -381,36 +393,96 @@ bubblejail is created by helpme970"
                 };;
             esac
             ((i++))
+            arg2="${!i}"
+            if [[ ${#arg2} > 10 && "${arg2:$((${#arg2} - 4)):1}" == ":" || "${arg2:$((${#arg2} - 6)):1}" == ":" || "${arg2:$((${#arg2} - 10)):1}" == ":" ]]; then
+                if [[ "${arg2:$((${#arg2} - 4)):1}" == ":" ]]; then
+                    arg3="${!i//${arg2:$((${#arg2} - 4))}/}"
+                    arg2="${arg2:$((${#arg2} - 3))}"
+                elif [[ "${arg2:$((${#arg2} - 6)):1}" == ":" ]]; then
+                    arg3="${!i//${arg2:$((${#arg2} - 6))}/}"
+                    arg2="${arg2:$((${#arg2} - 5))}"
+                elif [[ "${arg2:$((${#arg2} - 10)):1}" == ":" ]]; then
+                    arg3="${!i//${arg2:$((${#arg2} - 10))}/}"
+                    arg2="${arg2:$((${#arg2} - 9))}"
+                else
+                    echo "Error"
+                    exit 1
+                fi
+                chmod=""
+                if [[ ${#arg2} == 3 && $arg2 =~ ^[0-9]+$ ]]; then
+                    chmod="--chmod $arg2"
+                elif [[ ${#arg2} == 9 || ${#arg2} == 5 ]]; then
+                    if [ ${#arg2} == 5 ]; then
+                        echo test
+                        if [ "${arg2:0:1}" == "a" ]; then
+                            arg2="${arg2:2}${arg2:2}${arg2:2}"
+                        elif [ "${arg2:0:1}" == "g" ]; then
+                            arg2="---${arg2:2}${arg2:2}"
+                        elif [ "${arg2:0:1}" == "u" ]; then
+                            arg2="------${arg2:2}"
+                        else
+                            echo "Error"
+                            exit 1
+                        fi
+                    fi
+
+                    chmod=""
+                    tmp=0
+                    special=0
+                    for ((l=0; l<=${#arg2}-1; l++)); do
+                        if [ "${arg2:l:1}" == "x" ]; then
+                            tmp=$((tmp + 1))
+                        elif [ "${arg2:l:1}" == "w" ]; then
+                            tmp=$((tmp + 2))
+                        elif [ "${arg2:l:1}" == "r" ]; then
+                            tmp=$((tmp + 4))
+                        elif [[ "${arg2:l:1}" == "s" && l == 2 ]]; then
+                            special=$((special + 4))
+                        elif [[ "${arg2:l:1}" == "s" && l == 5 ]]; then
+                            special=$((special + 2))
+                        elif [[ "${arg2:l:1}" == "t" && l == 8 ]]; then
+                            special=$((special + 1))
+                        elif [ "${arg2:l:1}" == "-" ]; then
+                            :
+                        else
+                            echo "Error: chmod cannot be used with these parameters"
+                            exit 1
+                        fi
+                        if [[ $l == 2 || $l == 5 || $l == 8 ]]; then
+                            chmod="${chmod}${tmp}"
+                            tmp=0
+                        fi
+                    done
+                    chmod="--chmod $chmod"
+                fi
+            fi
+
             case "$arg" in
                 --pass|--ro-pass|--dev-pass|--bind|--ro-bind|--dev-bind) {
-
-                    tmp="$(readlink -f "${!i}")"
-                    #tmp="${tmp// /\\ }"
-                    #tmp="${tmp//(/\\(}"
-                    #tmp="${tmp//)/\\)}"
+                    tmp="$(readlink -f "${arg3}")"
                     if [ -e "$tmp" ]; then
                         :
-                    elif [ ! -e "$(readlink -f ${!i})" ]; then
-                        if [ -e "${!i}" ]; then
-                            tmp="${!i}"
-                        elif [ ! -e "${!i}" ]; then
-                            echo "File ${!i} does not exist"
+                    elif [ ! -e "$(readlink -f ${arg3})" ]; then
+                        if [ -e "${arg3}" ]; then
+                            tmp="${arg3}"
+                        elif [ ! -e "${arg3}" ]; then
+                            echo "File ${arg3} does not exist"
                             exit 1
                         fi
                     fi
                 };;
                 *) {
-                    tmp="${!i}"
+                    tmp="${arg3}"
                 };;
             esac
             case "$arg" in
                 --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try) {            
-                    cmd="$cmd \"${tmp}\" \"${tmp}\""
+                    cmd="$cmd \"${tmp}\" \"${tmp}\" ${chmod} \"${tmp}\""
                 };;
                 --bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
                     cmd="$cmd \"${tmp}\""
                     ((i++))
-                    cmd="$cmd \"${!i}\""
+                    cmd="$cmd \"${!i}\" ${chmod} \"${!i}\""
                 };;
             esac
         };;
@@ -486,7 +558,61 @@ bubblejail is created by helpme970"
         --setenv|--bind-fd|--ro-bind-fd|--file|--bind-data|--ro-bind-data|--symlink|--chmod) {
             cmd="$cmd $arg"
             ((i++))
-            cmd="$cmd '${!i}'"
+
+            if [ "$arg" == "--chmod" ]; then
+                arg="${!i}"
+                if [[ ${#arg} == 3 && $arg =~ ^[0-9]+$ ]]; then
+                    :
+                elif [[ ${#arg} == 9 || ${#arg} == 5 ]]; then
+                    if [ ${#arg} == 5 ]; then
+                        echo test
+                        if [ "${arg:0:1}" == "a" ]; then
+                            arg="${arg:2}${arg:2}${arg:2}"
+                        elif [ "${arg:0:1}" == "g" ]; then
+                            arg="---${arg:2}${arg:2}"
+                        elif [ "${arg:0:1}" == "u" ]; then
+                            arg="------${arg:2}"
+                        else
+                            echo "Error"
+                            exit 1
+                        fi
+                    fi
+
+                    chmod=""
+                    tmp=0
+                    special=0
+                    for ((l=0; l<=${#arg}-1; l++)); do
+                        if [ "${arg:l:1}" == "x" ]; then
+                            tmp=$((tmp + 1))
+                        elif [ "${arg:l:1}" == "w" ]; then
+                            tmp=$((tmp + 2))
+                        elif [ "${arg:l:1}" == "r" ]; then
+                            tmp=$((tmp + 4))
+                        elif [[ "${arg:l:1}" == "s" && l == 2 ]]; then
+                            special=$((special + 4))
+                        elif [[ "${arg:l:1}" == "s" && l == 5 ]]; then
+                            special=$((special + 2))
+                        elif [[ "${arg:l:1}" == "t" && l == 8 ]]; then
+                            special=$((special + 1))
+                        elif [ "${arg:l:1}" == "-" ]; then
+                            :
+                        else
+                            echo "Error: chmod cannot be used with these parameters"
+                            exit 1
+                        fi
+                        if [[ $l == 2 || $l == 5 || $l == 8 ]]; then
+                            chmod="${chmod}${tmp}"
+                            tmp=0
+                        fi
+                    done
+                    arg="$chmod"
+                fi
+            else
+                echo "Error: wrong permissions"
+                exit 1
+            fi
+
+            cmd="$cmd '${arg}'"
             ((i++))
             cmd="$cmd '${!i}'"
         };;
