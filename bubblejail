@@ -29,6 +29,7 @@ copy=""
 dbus=""
 chdir=""
 programname=""
+xdg=""
 
 for ((i=1 ; i<=$# ; i++ )); do
     arg=${!i}
@@ -149,7 +150,7 @@ for ((i=1 ; i<=$# ; i++ )); do
                 mkdir -p $XDG_RUNTIME_DIR/xdg-dbus-proxy
                 for l in {0..50}; do
                     if [ ! -e "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$l.sock" ]; then
-                        tmp="$l"
+                        xdg="$l"
                         break
                     fi
                 done
@@ -394,6 +395,8 @@ bubblejail is created by helpme970"
             esac
             ((i++))
             arg2="${!i}"
+            arg3="${!i}"
+            chmod=""
             if [[ ${#arg2} > 10 && "${arg2:$((${#arg2} - 4)):1}" == ":" || "${arg2:$((${#arg2} - 6)):1}" == ":" || "${arg2:$((${#arg2} - 10)):1}" == ":" ]]; then
                 if [[ "${arg2:$((${#arg2} - 4)):1}" == ":" ]]; then
                     arg3="${!i//${arg2:$((${#arg2} - 4))}/}"
@@ -408,7 +411,6 @@ bubblejail is created by helpme970"
                     echo "Error"
                     exit 1
                 fi
-                chmod=""
                 if [[ ${#arg2} == 3 && $arg2 =~ ^[0-9]+$ ]]; then
                     chmod="--chmod $arg2"
                 elif [[ ${#arg2} == 9 || ${#arg2} == 5 ]]; then
@@ -476,13 +478,21 @@ bubblejail is created by helpme970"
                 };;
             esac
             case "$arg" in
-                --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try) {            
-                    cmd="$cmd \"${tmp}\" \"${tmp}\" ${chmod} \"${tmp}\""
+                --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try) {     
+                    if [[ "$chmod" != "" ]]; then
+                        cmd="$cmd \"${tmp}\" \"${tmp}\" ${chmod} \"${tmp}\""
+                    else
+                        cmd="$cmd \"${tmp}\" \"${tmp}\""
+                    fi       
                 };;
                 --bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
                     cmd="$cmd \"${tmp}\""
                     ((i++))
-                    cmd="$cmd \"${!i}\" ${chmod} \"${!i}\""
+                    if [[ "$chmod" != "" ]]; then
+                        cmd="$cmd \"${!i}\" ${chmod} \"${!i}\""
+                    else
+                        cmd="$cmd \"${!i}\""
+                    fi
                 };;
             esac
         };;
@@ -688,8 +698,8 @@ sleep 0.2"
 if [ "$xsession" != "" ]; then
     rm -f /tmp/.X11-unix/X$xsession
 fi
-if [ -e "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock" ]; then
-    rm -f "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock"
+if [ -e "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$xdg.sock" ]; then
+    rm -f "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$xdg.sock"
 fi
 
 pkill -P $$
