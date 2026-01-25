@@ -618,8 +618,7 @@ bubblejail is created by helpme970"
                     arg="$chmod"
                 fi
             else
-                echo "Error: wrong permissions"
-                exit 1
+                arg="${!i}"
             fi
 
             cmd="$cmd '${arg}'"
