@@ -8,12 +8,12 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-mkdir -p $HOME/.bubblejail/sandbox
-mkdir -p $HOME/.bubblejail/profiles
+mkdir -p $HOME/.config/bubblejail/sandbox
+mkdir -p $HOME/.config/bubblejail/profiles
 
 
-if [[ ! -f $HOME/.bubblejail/tmp ]]; then
-    echo "" > $HOME/.bubblejail/tmp
+if [[ ! -f $HOME/.config/bubblejail/tmp ]]; then
+    echo "" > $HOME/.config/bubblejail/tmp
 fi
 
 cmd=" --unshare-net --unshare-ipc"
@@ -65,8 +65,8 @@ for ((i=1 ; i<=$# ; i++ )); do
                     program2="$(readlink -f "${program2}")"
                 elif [ -e "$(readlink -f "${!i}")" ]; then
                     program2="${!i}"
-                elif [ -e "$HOME/.bubblejail/sandbox/$program2" ]; then
-                    program2="$HOME/.bubblejail/sandbox/$program2"
+                elif [ -e "$HOME/.config/bubblejail/sandbox/$program2" ]; then
+                    program2="$HOME/.config/bubblejail/sandbox/$program2"
                 else
                     echo "Program ${program2} does not exist"
                     exit 1
@@ -95,8 +95,8 @@ for ((i=1 ; i<=$# ; i++ )); do
             fi
 
             if [ "$virt_home" != "" ]; then
-                mkdir -p $HOME/.bubblejail/sandbox/$programname$new_home
-                cmd=" --bind ~/.bubblejail/sandbox/$programname /$cmd"
+                mkdir -p $HOME/.config/bubblejail/sandbox/$programname$new_home
+                cmd=" --bind ~/.config/bubblejail/sandbox/$programname /$cmd"
             elif [ "$tmp_home" != "" ]; then
                 cmd=" --tmpfs $new_home$cmd"
             elif [ "$box" != "" ]; then
@@ -108,10 +108,10 @@ for ((i=1 ; i<=$# ; i++ )); do
             if [ ${#copy} -gt 0 ]; then
                 IFS=';' read -ra copy <<< "$copy"
                 for l in "${copy[@]}"; do
-                    if [ -e "$HOME/.bubblejail/sandbox/$programname$l" ]; then
-                        echo "$HOME/.bubblejail/sandbox/$programname$l already exists"
-                    elif [ ! -e "$HOME/.bubblejail/sandbox/$programname$l" ]; then
-                        echo "$HOME/.bubblejail/sandbox/$programname$l created"
+                    if [ -e "$HOME/.config/bubblejail/sandbox/$programname$l" ]; then
+                        echo "$HOME/.config/bubblejail/sandbox/$programname$l already exists"
+                    elif [ ! -e "$HOME/.config/bubblejail/sandbox/$programname$l" ]; then
+                        echo "$HOME/.config/bubblejail/sandbox/$programname$l created"
                         if [ -d "$l" ]; then
                             if [ "${l:$((${#l}-1)):1}" == "/" ]; then
                                 l=${l:$((${#l}-1))}
@@ -119,15 +119,15 @@ for ((i=1 ; i<=$# ; i++ )); do
                             IFS='/' read -r -a array <<< "$l"
                             array="${array[-1]}"
                             l2="${l//$array/ }"
-                            mkdir -p $HOME/.bubblejail/sandbox/$programname$l2
-                            cp -R "$l" "$HOME/.bubblejail/sandbox/$programname$l"
+                            mkdir -p $HOME/.config/bubblejail/sandbox/$programname$l2
+                            cp -R "$l" "$HOME/.config/bubblejail/sandbox/$programname$l"
                             echo cp1
                         elif [ -f "$l" ]; then
                             IFS='/' read -r -a array <<< "$l"
                             array="${array[-1]}"
                             l2="${l//$array/ }"
-                            mkdir -p $HOME/.bubblejail/sandbox/$programname$l2
-                            cp "$l" "$HOME/.bubblejail/sandbox/$programname$l"
+                            mkdir -p $HOME/.config/bubblejail/sandbox/$programname$l2
+                            cp "$l" "$HOME/.config/bubblejail/sandbox/$programname$l"
                             echo cp2
                         else
                             echo fehler
@@ -138,7 +138,7 @@ for ((i=1 ; i<=$# ; i++ )); do
                         exit 1
                     fi
                     old="$l"
-                    l="$HOME/.bubblejail/sandbox/$programname$l"
+                    l="$HOME/.config/bubblejail/sandbox/$programname$l"
                     cmd="$cmd --bind \"$l\" \"$old\""
                 done
             fi
@@ -194,9 +194,9 @@ for ((i=1 ; i<=$# ; i++ )); do
             done
 
             # profiles
-            if [ -e "$HOME/.bubblejail/profiles/$programname" ]; then
-                echo "Using profile \"$HOME/.bubblejail/profiles/$programname\""
-                cmd="bash \"$HOME/.bubblejail/profiles/$programname\""
+            if [ -e "$HOME/.config/bubblejail/profiles/$programname" ]; then
+                echo "Using profile \"$HOME/.config/bubblejail/profiles/$programname\""
+                cmd="bash \"$HOME/.config/bubblejail/profiles/$programname\""
             else
                 # --as-pid-1
                 # PID 1 is the init system, e.g. systemd
@@ -333,7 +333,7 @@ bubblejail is created by helpme970"
             cmd="$cmd --dev-bind /dev/v4l /dev/v4l --dev-bind /dev/video0 /dev/video0"
         };;
         --stdir) {
-            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --bind $HOME/.bubblejail/tmp /etc/hostname --chmod 000 /etc/hostname --bind $HOME/.bubblejail/tmp /etc/os-release --chmod 000 /etc/os-release --bind $HOME/.bubblejail/tmp /etc/shadow --chmod 000 /etc/shadow --bind $HOME/.bubblejail/tmp /etc/shadow- --chmod 000 /etc/shadow- --bind $HOME/.bubblejail/tmp /usr/lib/os-release --chmod 000 /usr/lib/os-release --bind $HOME/.bubblejail/tmp /var/lib/dbus/machine-id --chmod 000 /var/lib/dbus/machine-id --bind $HOME/.bubblejail/tmp /etc/machine-id --chmod 000 /etc/machine-id --tmpfs /usr/src --chmod 000 /usr/src --tmpfs /usr/lib/modules --chmod 000 /usr/lib/modules --tmpfs /usr/lib/gcc"
+            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --bind $HOME/.config/bubblejail/tmp /etc/hostname --chmod 000 /etc/hostname --bind $HOME/.config/bubblejail/tmp /etc/os-release --chmod 000 /etc/os-release --bind $HOME/.config/bubblejail/tmp /etc/shadow --chmod 000 /etc/shadow --bind $HOME/.config/bubblejail/tmp /etc/shadow- --chmod 000 /etc/shadow- --bind $HOME/.config/bubblejail/tmp /usr/lib/os-release --chmod 000 /usr/lib/os-release --bind $HOME/.config/bubblejail/tmp /var/lib/dbus/machine-id --chmod 000 /var/lib/dbus/machine-id --bind $HOME/.config/bubblejail/tmp /etc/machine-id --chmod 000 /etc/machine-id --tmpfs /usr/src --chmod 000 /usr/src --tmpfs /usr/lib/modules --chmod 000 /usr/lib/modules --tmpfs /usr/lib/gcc"
         };;
         --enable-userns|--share-userns) {
             userns=true           
@@ -364,13 +364,13 @@ bubblejail is created by helpme970"
         };;
         --box) {
             ((i++))
-            if [ -e "$HOME/.bubblejail/sandbox/${!i}" ]; then
+            if [ -e "$HOME/.config/bubblejail/sandbox/${!i}" ]; then
                 tmp="${!i}"
-            elif [ ! -e "$HOME/.bubblejail/sandbox/${!i}" ]; then
-                mkdir -p "$HOME/.bubblejail/sandbox/${!i}"
+            elif [ ! -e "$HOME/.config/bubblejail/sandbox/${!i}" ]; then
+                mkdir -p "$HOME/.config/bubblejail/sandbox/${!i}"
                 echo "Created new box ${!i}"
             fi
-            box="--bind $HOME/.bubblejail/sandbox/${!i} /"
+            box="--bind $HOME/.config/bubblejail/sandbox/${!i} /"
         };;
         --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try|--bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
             case $arg in
@@ -633,12 +633,10 @@ bubblejail is created by helpme970"
     esac
 done
 
-#if [[ $debug == false ]]; then
-#    cmd="$cmd &> /dev/null"
-#fi
-
 if [[ $debug == true ]]; then
     echo "$cmd"
+#elif [[ $debug == false ]]; then
+#    cmd="$cmd &> /dev/null"
 fi
 
 
