@@ -156,7 +156,7 @@ for ((i=1 ; i<=$# ; i++ )); do
                 done
                 echo "xdg-dbus-proxy $DBUS_SESSION_BUS_ADDRESS $XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock --filter$dbus"
                 xdg-dbus-proxy $DBUS_SESSION_BUS_ADDRESS $XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock --filter $dbus & # --log
-                cmd="$cmd --setenv DBUS_SESSION_BUS_ADDRESS unix:path="$XDG_RUNTIME_DIR"/bus --bind \"$XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock\" \"$XDG_RUNTIME_DIR/bus\""
+                cmd="$cmd --setenv DBUS_SESSION_BUS_ADDRESS unix:path=\"$XDG_RUNTIME_DIR\"/bus --bind \"$XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock\" \"$XDG_RUNTIME_DIR/bus\""
             fi
             
             ################
@@ -267,7 +267,7 @@ bubblejail is created by helpme970"
             if [[ "$XDG_SESSION_TYPE" == "wayland" && "$WAYLAND_DISPLAY" != "" ]]; then
                 cmd="$cmd --setenv WAYLAND_DISPLAY \"$WAYLAND_DISPLAY\" --ro-bind \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\" \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""
             elif [[ "$XDG_SESSION_TYPE" == "x11" && "$DISPLAY" != "" ]]; then
-                if [ "${!i+1}" == *":"* ]; then
+                if [[ "${!i+1}" == *":"* ]]; then
                     ((i++))
                     cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i} /tmp/.X11-unix/X${!i}"
                 else
@@ -438,11 +438,11 @@ bubblejail is created by helpme970"
                             tmp=$((tmp + 2))
                         elif [ "${arg2:l:1}" == "r" ]; then
                             tmp=$((tmp + 4))
-                        elif [[ "${arg2:l:1}" == "s" && l == 2 ]]; then
+                        elif [[ "${arg2:l:1}" == "s" && $l == 2 ]]; then
                             special=$((special + 4))
-                        elif [[ "${arg2:l:1}" == "s" && l == 5 ]]; then
+                        elif [[ "${arg2:l:1}" == "s" && $l == 5 ]]; then
                             special=$((special + 2))
-                        elif [[ "${arg2:l:1}" == "t" && l == 8 ]]; then
+                        elif [[ "${arg2:l:1}" == "t" && $l == 8 ]]; then
                             special=$((special + 1))
                         elif [ "${arg2:l:1}" == "-" ]; then
                             :
@@ -598,11 +598,11 @@ bubblejail is created by helpme970"
                             tmp=$((tmp + 2))
                         elif [ "${arg:l:1}" == "r" ]; then
                             tmp=$((tmp + 4))
-                        elif [[ "${arg:l:1}" == "s" && l == 2 ]]; then
+                        elif [[ "${arg:l:1}" == "s" && $l == 2 ]]; then
                             special=$((special + 4))
-                        elif [[ "${arg:l:1}" == "s" && l == 5 ]]; then
+                        elif [[ "${arg:l:1}" == "s" && $l == 5 ]]; then
                             special=$((special + 2))
-                        elif [[ "${arg:l:1}" == "t" && l == 8 ]]; then
+                        elif [[ "${arg:l:1}" == "t" && $l == 8 ]]; then
                             special=$((special + 1))
                         elif [ "${arg:l:1}" == "-" ]; then
                             :
@@ -648,7 +648,7 @@ if command -v Xephyr &> /dev/null; then
 elif command -v xpra &> /dev/null; then
     bash $0 --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xpra &
 elif command -v Xnest &> /dev/null; then
-    bash $0 --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xnest -geometry 1900x1000 -name "$programname" :\$xsession &
+    bash $0 --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xnest -geometry 1900x1000 -name \"$programname\" :\$xsession &
 else
     echo \"No X11 Host found\"
     exit 1
