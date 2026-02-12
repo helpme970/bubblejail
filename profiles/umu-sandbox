@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cmd="bash bubblejail --stdir --debug --box umu --ro-pass ./ --enable-userns --setenv PATH "$PATH" --gpu --setenv LD_LIBRARY_PATH /lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu --tmpfs $XDG_RUNTIME_DIR --ro-pass /etc/machine-id --video --audio --share-ipc --setenv WINEDEBUG \"-all\""
+cmd="bash bubblejail --stdir --debug --box umu --ro-pass ./ --enable-userns --setenv PATH \"$PATH\" --gpu --setenv LD_LIBRARY_PATH /lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu --tmpfs $XDG_RUNTIME_DIR --ro-pass /etc/machine-id --video --audio --share-ipc --setenv WINEDEBUG \"-all\""
 # --setenv PLATFORM /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/i386-linux-gnu-detect-platform
 
 if [ $# -gt 0 ]; then
