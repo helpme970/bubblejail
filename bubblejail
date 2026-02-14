@@ -275,6 +275,9 @@ bubblejail is created by helpme970"
                 fi
             fi
         };;
+        --tui) {
+            cmd="$cmd --setenv SHELL \"$SHELL\"  --setenv TERM \"$TERM\" --setenv COLORTERM \"$COLORTERM\""
+        };;
         --wayland) {
             cmd="$cmd --setenv WAYLAND_DISPLAY \"$WAYLAND_DISPLAY\" --ro-bind \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\" \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""
         };;
@@ -326,7 +329,7 @@ bubblejail is created by helpme970"
         --gpu) {
             cmd="$cmd --dev-bind /dev/dri /dev/dri --ro-bind /sys/dev /sys/dev --ro-bind /sys/devices /sys/devices" # --ro-bind /sys /sys"
         };;
-        --gpu) {
+        --kvm) {
             cmd="$cmd --dev-bind /dev/kvm /dev/kvm" #/sys/devices/pci0000:00/ /sys/devices/pci0000:00/"
         };;
         --cam|--webcam|--camera) { # v4l
