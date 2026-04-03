@@ -264,13 +264,14 @@ bubblejail is created by helpme970"
             exit
         };;
         --video) {
-            if [[ "$XDG_SESSION_TYPE" == "wayland" && "$WAYLAND_DISPLAY" != "" ]]; then
-                cmd="$cmd --setenv WAYLAND_DISPLAY \"$WAYLAND_DISPLAY\" --ro-bind \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\" \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""
-            elif [[ "$XDG_SESSION_TYPE" == "x11" && "$DISPLAY" != "" ]]; then
-                if [[ "${!i+1}" == *":"* ]]; then
-                    ((i++))
-                    cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i} /tmp/.X11-unix/X${!i}"
+            if [[ "$XDG_SESSION_TYPE" == "wayland" && "$WAYLAND_DISPLAY" != "" && -e "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]]; then
+                cmd="$cmd --setenv XDG_SESSION_TYPE \"$XDG_SESSION_TYPE\" --setenv WAYLAND_DISPLAY \"$WAYLAND_DISPLAY\" --ro-bind \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\" \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""
+            elif [[ "$XDG_SESSION_TYPE" == "x11" && -e "/tmp/.X11-unix/" && "$DISPLAY" != "" ]]; then
+                ((i++))
+                if [[ "${!i}" == *":"* ]]; then
+                    cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i/:/} /tmp/.X11-unix/X${!i/:/}"
                 else
+                    ((i--))
                     cmd="$cmd --setenv DISPLAY ":0" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
                 fi
             fi
@@ -285,10 +286,10 @@ bubblejail is created by helpme970"
             ((i++))
             if [[ -e /tmp/.X11-unix/X0 ]]; then
                 if [[ "${!i}" == *":"* ]]; then
-                    cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i:1} /tmp/.X11-unix/X${!i:1}"
+                    cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i/:/} /tmp/.X11-unix/X${!i/:/}"
                 else
                     i=$(($i-1))
-                    cmd="$cmd --setenv DISPLAY ":0" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
+                    cmd="$cmd --setenv DISPLAY \":0\" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
                 fi
             else
                 echo "X11 not running, cannot be used as compositor"
@@ -328,6 +329,26 @@ bubblejail is created by helpme970"
         };;
         --gpu) {
             cmd="$cmd --dev-bind /dev/dri /dev/dri --ro-bind /sys/dev /sys/dev --ro-bind /sys/devices /sys/devices" # --ro-bind /sys /sys"
+
+            # Nvidia specific paths
+            if [[ -e "/dev/nvidia-modeset" ]]; then
+                cmd="$cmd --dev-bind /dev/nvidia-modeset /dev/nvidia-modeset"
+            fi
+            if [[ -e "/dev/nvidia-uvm" ]]; then
+                cmd="$cmd --dev-bind /dev/nvidia-uvm /dev/nvidia-uvm"
+            fi
+            if [[ -e "/dev/nvidia-uvm-tools" ]]; then
+                cmd="$cmd --dev-bind /dev/nvidia-uvm-tools /dev/nvidia-uvm-tools"
+            fi
+            if [[ -e "/dev/nvidia0" ]]; then
+                cmd="$cmd --dev-bind /dev/nvidia0 /dev/nvidia0"
+            fi
+            if [[ -e "/dev/nvidiactl" ]]; then
+                cmd="$cmd --dev-bind /dev/nvidiactl /dev/nvidiactl"
+            fi
+            if [[ -e "/dev/nvram" ]]; then
+                cmd="$cmd --dev-bind /dev/nvram /dev/nvram"
+            fi
         };;
         --kvm) {
             cmd="$cmd --dev-bind /dev/kvm /dev/kvm" #/sys/devices/pci0000:00/ /sys/devices/pci0000:00/"
@@ -336,7 +357,7 @@ bubblejail is created by helpme970"
             cmd="$cmd --dev-bind /dev/v4l /dev/v4l --dev-bind /dev/video0 /dev/video0"
         };;
         --stdir) {
-            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --bind $HOME/.config/bubblejail/tmp /etc/hostname --chmod 000 /etc/hostname --bind $HOME/.config/bubblejail/tmp /etc/os-release --chmod 000 /etc/os-release --bind $HOME/.config/bubblejail/tmp /etc/shadow --chmod 000 /etc/shadow --bind $HOME/.config/bubblejail/tmp /etc/shadow- --chmod 000 /etc/shadow- --bind $HOME/.config/bubblejail/tmp /usr/lib/os-release --chmod 000 /usr/lib/os-release --bind $HOME/.config/bubblejail/tmp /var/lib/dbus/machine-id --chmod 000 /var/lib/dbus/machine-id --bind $HOME/.config/bubblejail/tmp /etc/machine-id --chmod 000 /etc/machine-id --tmpfs /usr/src --chmod 000 /usr/src --tmpfs /usr/lib/modules --chmod 000 /usr/lib/modules --tmpfs /usr/lib/gcc"
+            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --bind $HOME/.config/bubblejail/tmp /etc/hostname --chmod 000 /etc/hostname --bind $HOME/.config/bubblejail/tmp /etc/os-release --chmod 000 /etc/os-release --bind $HOME/.config/bubblejail/tmp /etc/shadow --chmod 000 /etc/shadow --bind $HOME/.config/bubblejail/tmp /etc/shadow- --chmod 000 /etc/shadow- --bind $HOME/.config/bubblejail/tmp /usr/lib/os-release --chmod 000 /usr/lib/os-release --bind $HOME/.config/bubblejail/tmp /var/lib/dbus/machine-id --chmod 000 /var/lib/dbus/machine-id --bind $HOME/.config/bubblejail/tmp /etc/machine-id --chmod 000 /etc/machine-id --tmpfs /usr/src --chmod 000 /usr/src --tmpfs /usr/lib/modules --chmod 000 /usr/lib/modules" # --tmpfs /usr/lib/gcc
         };;
         --enable-userns|--share-userns) {
             userns=true           
@@ -519,7 +540,7 @@ bubblejail is created by helpme970"
             cmd="$cmd ${!i}"
         };;
         --pass-lang) {
-            cmd="$cmd --setenv LANGUAGE $LANGUAGE --setenv LANG $LANG"
+            cmd="$cmd --setenv LANG $LANG" # --setenv LANGUAGE $LANGUAGE
         };;
         --usb) {
             cmd="$cmd --bind-try /media /media --bind-try /mnt /mnt --bind-try /run/media /run/media"
