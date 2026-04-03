@@ -1,18 +1,44 @@
 #!/bin/bash
 
-cmd="bash bubblejail --stdir --debug --box umu --ro-pass ./ --enable-userns --setenv PATH \"$PATH\" --gpu --setenv LD_LIBRARY_PATH /lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu --tmpfs $XDG_RUNTIME_DIR --ro-pass /etc/machine-id --video --audio --share-ipc --setenv WINEDEBUG \"-all\""
+# Exit if no argument is given
+if [ $# -eq 0 ]; then
+    echo "Bitte übergib den Programmnamen oder den Pfad zur Datei als Parameter"
+    exit 1
+fi
+
+cmd="bash bubblejail --stdir --debug --box umu --pass ./ --enable-userns --setenv PATH \"$PATH\" --gpu --setenv LD_LIBRARY_PATH /lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu:/lib32:/usr/lib32 --tmpfs $XDG_RUNTIME_DIR --ro-pass /etc/machine-id --video --audio --share-ipc --setenv WINEDEBUG \"-all\" --pass ~/.local/share/Steam --tui" #--setenv WINEDEBUG \"err+all\" --setenv WINEARCH win64 --share-ipc
 # --setenv PLATFORM /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/i386-linux-gnu-detect-platform
 
+shortcut=false
 if [ $# -gt 0 ]; then
     for ((i=1 ; i<=$# ; i++ )); do
         arg=${!i}
         case "$arg" in
+            --video) {
+                cmd="${cmd//--video/}"
+                if [[ "$XDG_SESSION_TYPE" == "wayland" && -e "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" && "$WAYLAND_DISPLAY" != "" ]]; then
+    #             if [[ "$XDG_SESSION_TYPE" == "wayland" && "$WAYLAND_DISPLAY" != "" ]]; then # can't be used because of xwayland
+                    cmd="$cmd --setenv XDG_SESSION_TYPE \"$XDG_SESSION_TYPE\" --setenv WAYLAND_DISPLAY \"$WAYLAND_DISPLAY\" --ro-bind \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\" \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""
+    #             elif [[ "$XDG_SESSION_TYPE" == "x11" && "$DISPLAY" != "" ]]; then
+                elif [[ "$XDG_SESSION_TYPE" == "x11" && -e "/tmp/.X11-unix/" && "$DISPLAY" != "" ]]; then
+                    ((i++))
+                    if [[ "${!i}" == *":"* ]]; then
+                        cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i/:/} /tmp/.X11-unix/X${!i/:/}"
+                    else
+                        ((i--))
+                        cmd="$cmd --setenv DISPLAY \":0\" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
+                    fi
+                fi
+            };;
+            --shortcut) {
+                shortcut=true
+            };;
             --no-audio|--disable-audio) {
                 cmd="${cmd//--audio/}"
             };;
-            --x11-sandbox|--disable-x11) {
-                cmd="${cmd//--video/--x11-sandbox}"
-            };;
+#             --x11-sandbox|--disable-x11) {
+#                 cmd="${cmd//--video/--x11-sandbox}"
+#             };;
             --net) {
                 cmd="$cmd --net"
             };;
@@ -52,6 +78,18 @@ if [ $# -gt 0 ]; then
                 fi
                 cmd="$cmd --setenv WINEPREFIX '$HOME/Games/$WINEPREFIX'"
 
+                if [ "$PROTONPATH" != "" ]; then
+                    cmd="$cmd --pass '$PROTONPATH' --setenv PROTONPATH '$PROTONPATH'"
+                fi
+
+                if [ "$PROTON_NO_ESYNC" != "" ]; then
+                    cmd="$cmd --setenv PROTON_NO_ESYNC '$PROTON_NO_ESYNC'"
+                fi
+
+                if [ "$DXVK_ASYNC" != "" ]; then
+                    cmd="$cmd --setenv DXVK_ASYNC '$DXVK_ASYNC'"
+                fi
+
                 if [ "$PROTON_LOG" != "" ]; then
                     cmd="$cmd --setenv PROTONLOG $PROTON_LOG"
                 fi
@@ -69,6 +107,19 @@ if [ $# -gt 0 ]; then
                 for ((l=$i; l<=$#; l++)); do
                     cmd="$cmd '${!l}'"
                 done
+
+                if [[ "$shortcut" == true && ! -e "$HOME/Schreibtisch/test.desktop" ]]; then
+                    tmp="[Desktop Entry]
+Name='${arg//\//\_}'
+Comment=Run a game via UMU
+Exec='${cmd}'
+#Icon=steam
+Terminal=true
+Type=Game
+Categories=Game;" 
+                echo "$tmp" > $HOME/Schreibtisch/test.desktop
+                chmod a+x $HOME/Schreibtisch/test.desktop
+                fi
                 break
             };;
         esac
