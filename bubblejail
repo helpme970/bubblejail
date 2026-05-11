@@ -16,7 +16,7 @@ if [[ ! -f $HOME/.config/bubblejail/tmp ]]; then
     echo "" > $HOME/.config/bubblejail/tmp
 fi
 
-cmd=" --unshare-net --unshare-ipc"
+cmd=" --new-session --unshare-net --unshare-ipc"
 user="user" # option to change username in sandbox, maybe in the future
 #user="$USER"
 debug=false
@@ -200,7 +200,7 @@ for ((i=1 ; i<=$# ; i++ )); do
             else
                 # --as-pid-1
                 # PID 1 is the init system, e.g. systemd
-                cmd="bwrap --die-with-parent --unshare-user --unshare-cgroup --unshare-pid --unshare-uts --new-session --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\"$cmd"
+                cmd="./bwrap --die-with-parent --unshare-user --unshare-cgroup --unshare-pid --unshare-uts --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\"$cmd"
             fi
 
             break
@@ -257,7 +257,7 @@ for ((i=1 ; i<=$# ; i++ )); do
         };;
         -v|--version) {
             echo "bubblejail 1.0"
-            bwrap --version
+            ./bwrap --version
             echo "
 Released under the GPL-3.0 license
 bubblejail is created by helpme970"
@@ -358,6 +358,13 @@ bubblejail is created by helpme970"
         };;
         --stdir) {
             cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --bind $HOME/.config/bubblejail/tmp /etc/hostname --chmod 000 /etc/hostname --bind $HOME/.config/bubblejail/tmp /etc/os-release --chmod 000 /etc/os-release --bind $HOME/.config/bubblejail/tmp /etc/shadow --chmod 000 /etc/shadow --bind $HOME/.config/bubblejail/tmp /etc/shadow- --chmod 000 /etc/shadow- --bind $HOME/.config/bubblejail/tmp /usr/lib/os-release --chmod 000 /usr/lib/os-release --bind $HOME/.config/bubblejail/tmp /var/lib/dbus/machine-id --chmod 000 /var/lib/dbus/machine-id --bind $HOME/.config/bubblejail/tmp /etc/machine-id --chmod 000 /etc/machine-id --tmpfs /usr/src --chmod 000 /usr/src --tmpfs /usr/lib/modules --chmod 000 /usr/lib/modules" # --tmpfs /usr/lib/gcc
+        };;
+        --noseccomp) {
+            # May improve performance (https://github.com/flatpak/flatpak/issues/4187) but will open CVE-2017-5226 (https://github.com/containers/bubblewrap/issues/142)
+            cmd="${cmd//--new-session/}"
+        };;
+        --input) {
+            cmd="$cmd --dev-bind /dev/input /dev/input"
         };;
         --enable-userns|--share-userns) {
             userns=true           
@@ -562,16 +569,18 @@ bubblejail is created by helpme970"
             echo "The parameter \"${!i}\" is already automaticaly used in bubblejail. You can remove it from your command because it does nothing."
         };;
 
-        --unshare-all|--as-pid-1) {
+        # zero parameter
+        --unshare-all|--as-pid-1|--level-prefix) {
             cmd="$cmd $arg"
         };;
 
         # one parameter
-        --args|--argv0|--userns|--userns2|--pidns|--uid|--gid|--hostname|--unsetenv|--lock-file|--sync-fd|--remount-ro|--exec-label|--file-label|--proc|--dev|--tmpfs|--mqueue|--dir|--seccomp|--add-seccomp-fd|--block-fd|--userns-block-fd|--info-fd|--json-status-fd|--cap-add|--cap-drop|--perms|--size) {
+        --args|--argv0|--userns|--userns2|--pidns|--uid|--gid|--hostname|--unsetenv|--lock-file|--sync-fd|--remount-ro|--exec-label|--file-label|--proc|--dev|--tmpfs|--mqueue|--dir|--seccomp|--add-seccomp-fd|--block-fd|--userns-block-fd|--info-fd|--json-status-fd|--cap-add|--cap-drop|--perms|--size|--overlay-src|--tmp-overlay|--ro-overlay) {
             cmd="$cmd $arg"
             ((i++))
             cmd="$cmd ${!i}"
         };;
+
         --chdir) {
             ((i++))
             if [ -e "$(readlink -f ${!i})" ]; then
@@ -650,9 +659,15 @@ bubblejail is created by helpme970"
             cmd="$cmd '${!i}'"
         };;
 
-        *) {
-            echo "Falsches Argument $arg"
-            exit 1
+        # three arguments
+        --overlay) {
+            cmd="$cmd $arg"
+            ((i++))
+            cmd="$cmd ${!i}"
+            ((i++))
+            cmd="$cmd ${!i}"
+            ((i++))
+            cmd="$cmd ${!i}"
         };;
     esac
 done
