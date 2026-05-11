@@ -1,6 +1,6 @@
 ## bubblejail
 
-A lightweight Bash wrapper around **bubblewrap** that simplifies its command line and adds handy features such as AppImage support. Contributions and bug reports are welcome.
+A lightweight Bash wrapper for **bubblewrap** that simplifies its command line interface and adds handy features such as AppImage support. Contributions and bug reports are welcome.
 
 ---
 
@@ -87,6 +87,8 @@ The example above launches **Firefox** with shared standard directories, video o
 | `--ro-usb` | Same as `--usb` but read‑only. |
 | `--dbus <pattern>` | Grant the program ownership of matching D‑Bus names (e.g., `org.example.portal.*`). |
 | `--desktop-portal` | Allow secure access to external files, opening URLs, etc., via the desktop portal. |
+| `--noseccomp` | May improve performance (https://github.com/flatpak/flatpak/issues/4187) but will open CVE-2017-5226 (https://github.com/containers/bubblewrap/issues/142) |
+| `--input` | Passthrough all input's, needed to use gamecontrollers |
 
 > **All** native bubblewrap arguments are also accepted; they are passed through unchanged.
 
