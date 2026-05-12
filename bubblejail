@@ -252,11 +252,13 @@ for ((i=1 ; i<=$# ; i++ )); do
 --usb                               Pass all USB drives with write access.
 --ro-usb                            Same as --usb but read‑only.
 --dbus <pattern>                    Grant the program ownership of matching D‑Bus names (e.g., org.example.portal.*).
---desktop-portal                    Allow secure access to external files, opening URLs, etc., via the desktop portal."
+--desktop-portal                    Allow secure access to external files, opening URLs, etc., via the desktop portal.
+--noseccomp                         May improve performance (flatpak/flatpak#4187) but will open CVE-2017-5226 (containers/bubblewrap#142)
+--input                             Passthrough all input's, needed to use gamecontrollers"
             exit
         };;
         -v|--version) {
-            echo "bubblejail 1.0"
+            echo "bubblejail 1.1"
             ./bwrap --version
             echo "
 Released under the GPL-3.0 license
