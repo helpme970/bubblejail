@@ -8,12 +8,12 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-mkdir -p $HOME/.config/bubblejail/sandbox
-mkdir -p $HOME/.config/bubblejail/profiles
+mkdir -p "$HOME/.config/bubblejail/sandbox"
+mkdir -p "$HOME/.config/bubblejail/profiles"
 
 
 if [[ ! -f $HOME/.config/bubblejail/tmp ]]; then
-    echo "" > $HOME/.config/bubblejail/tmp
+    echo "" > "$HOME/.config/bubblejail/tmp"
 fi
 
 cmd=" --new-session --unshare-net --unshare-ipc"
@@ -95,7 +95,7 @@ for ((i=1 ; i<=$# ; i++ )); do
             fi
 
             if [ "$virt_home" != "" ]; then
-                mkdir -p $HOME/.config/bubblejail/sandbox/$programname$new_home
+                mkdir -p "$HOME/.config/bubblejail/sandbox/$programname$new_home"
                 cmd=" --bind ~/.config/bubblejail/sandbox/$programname /$cmd"
             elif [ "$tmp_home" != "" ]; then
                 cmd=" --tmpfs $new_home$cmd"
@@ -119,14 +119,14 @@ for ((i=1 ; i<=$# ; i++ )); do
                             IFS='/' read -r -a array <<< "$l"
                             array="${array[-1]}"
                             l2="${l//$array/ }"
-                            mkdir -p $HOME/.config/bubblejail/sandbox/$programname$l2
+                            mkdir -p "$HOME/.config/bubblejail/sandbox/$programname$l2"
                             cp -R "$l" "$HOME/.config/bubblejail/sandbox/$programname$l"
                             echo cp1
                         elif [ -f "$l" ]; then
                             IFS='/' read -r -a array <<< "$l"
                             array="${array[-1]}"
                             l2="${l//$array/ }"
-                            mkdir -p $HOME/.config/bubblejail/sandbox/$programname$l2
+                            mkdir -p "$HOME/.config/bubblejail/sandbox/$programname$l2"
                             cp "$l" "$HOME/.config/bubblejail/sandbox/$programname$l"
                             echo cp2
                         else
@@ -147,7 +147,7 @@ for ((i=1 ; i<=$# ; i++ )); do
             # DBus #
             ########
             if [[ "$dbus" != "" ]]; then
-                mkdir -p $XDG_RUNTIME_DIR/xdg-dbus-proxy
+                mkdir -p "$XDG_RUNTIME_DIR/xdg-dbus-proxy"
                 for l in {0..50}; do
                     if [ ! -e "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$l.sock" ]; then
                         xdg="$l"
@@ -155,7 +155,7 @@ for ((i=1 ; i<=$# ; i++ )); do
                     fi
                 done
                 echo "xdg-dbus-proxy $DBUS_SESSION_BUS_ADDRESS $XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock --filter$dbus"
-                xdg-dbus-proxy $DBUS_SESSION_BUS_ADDRESS $XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock --filter $dbus & # --log
+                xdg-dbus-proxy "$DBUS_SESSION_BUS_ADDRESS" "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock" --filter "$dbus" & # --log
                 cmd="$cmd --setenv DBUS_SESSION_BUS_ADDRESS unix:path=\"$XDG_RUNTIME_DIR\"/bus --bind \"$XDG_RUNTIME_DIR/xdg-dbus-proxy/$tmp.sock\" \"$XDG_RUNTIME_DIR/bus\""
             fi
             
@@ -175,7 +175,7 @@ for ((i=1 ; i<=$# ; i++ )); do
                 fi
                 eval "$path$programname --appimage-extract" > /dev/null
                 #mv "${path}squashfs-root" "$program-sandboxed"
-                mv "${pwd}squashfs-root" "$program-sandboxed"
+                mv "$(pwd)squashfs-root" "$program-sandboxed"
                 debug=true
                 cmd="$cmd --bind \"\${path//\$0/}\" \"\${path//\$0/}\" ./AppRun"
             else
@@ -184,7 +184,7 @@ for ((i=1 ; i<=$# ; i++ )); do
 
             ((i++))
             
-            for ((l=$i; l<=$#; l++)); do
+            for ((l=i; l<=$#; l++)); do
                 a="${!l}"
                 #a="${a// /\\ }"
                 #a="${a//(/\\(}"
@@ -229,7 +229,7 @@ for ((i=1 ; i<=$# ; i++ )); do
 --share-ipc                         Permit inter‑process communication.
 --net, --share-net, --network       Enable network connectivity.
 --root                              Run the sandbox as UID 0.
---nobody                            Run as UID 65534 (the “nobody” user).
+--nobody                            Run as UID 65534 (the 'nobody' user).
 --current-user                      Use the invoking user’s UID (default).
 --virt-home                         Use a persistent empty home directory.
 --tmp-home                          Use a temporary home that is removed on exit.
@@ -274,7 +274,7 @@ bubblejail is created by helpme970"
                     cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i/:/} /tmp/.X11-unix/X${!i/:/}"
                 else
                     ((i--))
-                    cmd="$cmd --setenv DISPLAY ":0" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
+                    cmd="$cmd --setenv DISPLAY \":0\" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
                 fi
             fi
         };;
@@ -290,7 +290,7 @@ bubblejail is created by helpme970"
                 if [[ "${!i}" == *":"* ]]; then
                     cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i/:/} /tmp/.X11-unix/X${!i/:/}"
                 else
-                    i=$(($i-1))
+                    i=$((i-1))
                     cmd="$cmd --setenv DISPLAY \":0\" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
                 fi
             else
@@ -430,7 +430,7 @@ bubblejail is created by helpme970"
             arg2="${!i}"
             arg3="${!i}"
             chmod=""
-            if [[ ${#arg2} > 10 && "${arg2:$((${#arg2} - 4)):1}" == ":" || "${arg2:$((${#arg2} - 6)):1}" == ":" || "${arg2:$((${#arg2} - 10)):1}" == ":" ]]; then
+            if [[ ${#arg2} -gt 10 && "${arg2:$((${#arg2} - 4)):1}" == ":" || "${arg2:$((${#arg2} - 6)):1}" == ":" || "${arg2:$((${#arg2} - 10)):1}" == ":" ]]; then
                 if [[ "${arg2:$((${#arg2} - 4)):1}" == ":" ]]; then
                     arg3="${!i//${arg2:$((${#arg2} - 4))}/}"
                     arg2="${arg2:$((${#arg2} - 3))}"
@@ -497,7 +497,7 @@ bubblejail is created by helpme970"
                     tmp="$(readlink -f "${arg3}")"
                     if [ -e "$tmp" ]; then
                         :
-                    elif [ ! -e "$(readlink -f ${arg3})" ]; then
+                    elif [ ! -e "$(readlink -f "${arg3}")" ]; then
                         if [ -e "${arg3}" ]; then
                             tmp="${arg3}"
                         elif [ ! -e "${arg3}" ]; then
@@ -577,7 +577,7 @@ bubblejail is created by helpme970"
         };;
 
         # one parameter
-        --args|--argv0|--userns|--userns2|--pidns|--uid|--gid|--hostname|--unsetenv|--lock-file|--sync-fd|--remount-ro|--exec-label|--file-label|--proc|--dev|--tmpfs|--mqueue|--dir|--seccomp|--add-seccomp-fd|--block-fd|--userns-block-fd|--info-fd|--json-status-fd|--cap-add|--cap-drop|--perms|--size|--overlay-src|--tmp-overlay|--ro-overlay) {
+        --args|--argv0|--userns|--userns2|--pidns|--uid|--gid|--hostname|--unsetenv|--lock-file|--sync-fd|--remount-ro|--exec-label|--file-label|--proc|--dev|--mqueue|--dir|--seccomp|--add-seccomp-fd|--block-fd|--userns-block-fd|--info-fd|--json-status-fd|--cap-add|--cap-drop|--perms|--size|--overlay-src|--tmp-overlay|--ro-overlay) {
             cmd="$cmd $arg"
             ((i++))
             cmd="$cmd ${!i}"
@@ -706,7 +706,7 @@ else
     exit 1
 fi
 
-#bash $0 --stdir --setenv DISPLAY ":0" --ro-bind /tmp/.X11-unix/X$xsession /tmp/.X11-unix/X0 --gpu --debug -p bspwm &
+# bash $0 --stdir --setenv DISPLAY \":0\" --ro-bind /tmp/.X11-unix/X$xsession /tmp/.X11-unix/X0 --gpu --debug -p bspwm &
 
 sleep 0.2"
     fi
@@ -714,12 +714,12 @@ sleep 0.2"
     if [[ "$programname" == *".appimage"* || "$programname" == *".Appimage"* || "$programname" == *".AppImage"* ]]; then
         if [ "$xsession" != "" ]; then
             echo "#!/bin/bash
-    path=\"\$(readlink -f \$0)\"
-    eval $final_cmd" > $program-sandboxed/run-sandboxed.bash
+path=\"\$(readlink -f \$0)\"
+eval $final_cmd" > "$program-sandboxed/run-sandboxed.bash"
         else
             echo "#!/bin/bash
-    path=\"\$(readlink -f \$0)\"
-    eval '$cmd'" > $program-sandboxed/run-sandboxed.bash
+path=\"\$(readlink -f \$0)\"
+eval '$cmd'" > "$program-sandboxed/run-sandboxed.bash"
         fi
     else
         if [ "$xsession" != "" ]; then
@@ -734,7 +734,7 @@ sleep 0.2"
 }
 
 if [ "$xsession" != "" ]; then
-    rm -f /tmp/.X11-unix/X$xsession
+    rm -f "/tmp/.X11-unix/X$xsession"
 fi
 if [ -e "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$xdg.sock" ]; then
     rm -f "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$xdg.sock"
