@@ -43,22 +43,22 @@ function abbruchtest {
         fi
 }
 
-# if [ "$display" == "" ]; then
-#     display=$($DIALOG --list --radiolist  \
-#             --text="Display" \
-#             --column="" --column="Display"\
-#             FALSE   "X11-Sandbox" \
-#             TRUE   "Host-diplay" \
-#     )
-#     abbruchtest $?
-# fi
-# if [ "$display" == "X11-Sandbox" ]; then
-#     cmd="$cmd --x11-sandbox"
-# elif [ "$display" == "Host-diplay" ]; then
-#     cmd="$cmd --x11"
-# else
-#     echo "Fehler"
-# fi
+if [ "$display" == "" ]; then
+    display=$($DIALOG --list --radiolist  \
+            --text="Display" \
+            --column="" --column="Display"\
+            FALSE   "X11-Sandbox" \
+            TRUE   "Host-diplay" \
+    )
+    abbruchtest $?
+fi
+if [ "$display" == "X11-Sandbox" ]; then
+    cmd="$cmd --x11-sandbox"
+elif [ "$display" == "Host-diplay" ]; then
+    cmd="$cmd --x11"
+else
+    echo "Fehler"
+fi
 
 if [ "$audio" == "" ]; then
     audio=$($DIALOG --list --radiolist  \
@@ -73,7 +73,7 @@ if [ "$audio" == "ein" ]; then
     cmd="$cmd --audio"
 fi
 
-cmd="$cmd -p $HOME/Downloads/Discord/Discord --no-sandbox"
+cmd="$cmd -p ./Discord/Discord"
 
 echo "$cmd"
 eval "$cmd"
