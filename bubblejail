@@ -316,18 +316,18 @@ bubblejail is created by helpme970"
         };;
         --audio) {
             # PulseAudio
-            cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pulse/native\" \"$XDG_RUNTIME_DIR/pulse/native\""
+            cmd="$cmd --ro-bind \"$XDG_RUNTIME_DIR/pulse/native\" \"$XDG_RUNTIME_DIR/pulse/native\""
             # --ro-bind-try ~/.config/pulse/cookie ~/.config/pulse/cookie
             # ^ only needed for audio over network
 
             # Pipewire
-            #cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\""
+            cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\""
 
             # ALSA
-            cmd="$cmd --dev-bind-try /dev/snd /dev/snd"
+            cmd="$cmd --dev-bind /dev/snd /dev/snd"
 
             # OSS
-            #cmd="$cmd --dev-bind-try /dev/dsp /dev/dsp"
+            cmd="$cmd --dev-bind-try /dev/dsp /dev/dsp"
         };;
         --gpu) {
             cmd="$cmd --dev-bind /dev/dri /dev/dri --ro-bind /sys/dev /sys/dev --ro-bind /sys/devices /sys/devices" # --ro-bind /sys /sys"
