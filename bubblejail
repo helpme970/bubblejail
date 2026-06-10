@@ -316,7 +316,7 @@ bubblejail is created by helpme970"
         };;
         --audio) {
             # PulseAudio
-            cmd="$cmd --ro-bind \"$XDG_RUNTIME_DIR/pulse/native\" \"$XDG_RUNTIME_DIR/pulse/native\""
+            cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pulse/native\" \"$XDG_RUNTIME_DIR/pulse/native\""
             # --ro-bind-try ~/.config/pulse/cookie ~/.config/pulse/cookie
             # ^ only needed for audio over network
 
