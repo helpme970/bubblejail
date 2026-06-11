@@ -35,7 +35,12 @@ A lightweight Bash wrapper for **bubblewrap** that simplifies its command line i
 ### Basic Usage
 
 ```bash
-bash bubblejail --stdir --video --net --audio -p firefox
+bash bubblejail --stdir --video --gpu --net --audio -p firefox
+```
+
+### Games with controller
+```bash
+bash bubblejail --stdir --video --gpu --audio --input -p ./hollowknight
 ```
 
 The example above launches **Firefox** with shared standard directories, video output, network access, and audio support.
