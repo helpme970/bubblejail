@@ -38,12 +38,12 @@ A lightweight Bash wrapper for **bubblewrap** that simplifies its command line i
 bash bubblejail --stdir --video --gpu --net --audio -p firefox
 ```
 
+The example above launches **Firefox** with shared standard directories, video output, network access, gpu acceleration and audio support.
+
 ### Games with controller
 ```bash
 bash bubblejail --stdir --video --gpu --audio --input -p ./hollowknight
 ```
-
-The example above launches **Firefox** with shared standard directories, video output, network access, and audio support.
 
 ---
 
@@ -103,6 +103,6 @@ The example above launches **Firefox** with shared standard directories, video o
 
 - Report bugs via the **Issues** tab.  
 - Star the repository if you find it useful.  
-- Pull requests are welcome—especially improvements to documentation, new helper flags, or better handling of edge cases.
+- Pull requests are welcome
 
 ---
