@@ -57,7 +57,7 @@ bash bubblejail --stdir --video --gpu --audio --input -p ./hollowknight
 | `-v, --version` | Print the versions of **bubblejail** and **bubblewrap**. |
 | `--video` | Auto‑detect and share the appropriate X11 or Wayland socket for GUI apps. |
 | `--wayland` | Explicitly share the Wayland socket. |
-| `--x11` | Share the default X11 socket. |
+| `--x11` | Share the default X11 socket. Grants access to the clipboard, screenshots/-share and every key press. |
 | `--x11 :N` | Share the X11 socket of session *N* (e.g., `:10`). |
 | `--x11-sandbox` | Start a fresh X11 session with Xephyr and run the program inside it. |
 | `--audio` | Forward PulseAudio, PipeWire, ALSA, or OSS sockets for sound and mic access. |
