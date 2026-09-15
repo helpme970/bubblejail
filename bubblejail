@@ -671,6 +671,12 @@ bubblejail is created by helpme970"
             ((i++))
             cmd="$cmd ${!i}"
         };;
+
+        *) {
+            echo "Argument could not be recognized:"
+            echo "$arg"
+            exit 1
+        };;
     esac
 done
 
