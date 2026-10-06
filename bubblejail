@@ -315,22 +315,30 @@ bubblejail is created by helpme970"
             fi
         };;
         --audio) {
-            # PulseAudio
-            cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pulse/native\" \"$XDG_RUNTIME_DIR/pulse/native\""
-            # --ro-bind-try ~/.config/pulse/cookie ~/.config/pulse/cookie
-            # ^ only needed for audio over network
-
             # Pipewire
-            cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\""
+            if [[ -e "$XDG_RUNTIME_DIR/pipewire-0" ]]; then
+                cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\""
+
+
+            # PulseAudio
+            elif [[ -e "$XDG_RUNTIME_DIR/pulse/native" ]]; then
+                cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pulse/native\" \"$XDG_RUNTIME_DIR/pulse/native\""
+                # --ro-bind-try ~/.config/pulse/cookie ~/.config/pulse/cookie
+                # ^ only needed for audio over network
+
 
             # ALSA
-            cmd="$cmd --dev-bind /dev/snd /dev/snd"
+            elif [[ -e "/dev/snd" ]]; then
+                cmd="$cmd --dev-bind /dev/snd /dev/snd"
+
 
             # OSS
-            cmd="$cmd --dev-bind-try /dev/dsp /dev/dsp"
+            elif [[ -e "/dev/dsp" ]]; then
+                cmd="$cmd --dev-bind-try /dev/dsp /dev/dsp"
+            fi
         };;
         --gpu) {
-            cmd="$cmd --dev-bind /dev/dri /dev/dri --ro-bind /sys/dev /sys/dev --ro-bind /sys/devices /sys/devices" # --ro-bind /sys /sys"
+            cmd="$cmd --dev-bind /dev/dri /dev/dri --ro-bind /sys/devices /sys/devices" # --ro-bind /sys /sys"
 
             # Nvidia specific paths
             if [[ -e "/dev/nvidia-modeset" ]]; then
@@ -691,7 +699,8 @@ fi
     if [ "$xsession" != "" ]; then
         final_cmd="
 if command -v Xephyr &> /dev/null; then
-    bash $0 --stdir --video --gpu --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :$xsession -br +bs -c -fakescreenfps 1 -r -reset -xinerama -terminate -once +extension XFIXES +extension RENDER +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -resizeable -title \"$programname\" -no-host-grab -screen 1920x1080 & # -2button -softCursor
+    # Xephyr workaround: it can only run in x11 not wayland
+    bash $0 --stdir --x11 --gpu --pass /tmp/.X11-unix/ --debug --audio -p Xephyr :$xsession -br +bs -c -fakescreenfps 1 -r -reset -xinerama -terminate -once +extension XFIXES +extension RENDER +extension SECURITY +extension GLX +extension XVideo +extension XVideo-MotionCompensation -resizeable -title \"$programname\" -no-host-grab -screen 1920x1080 & # -2button -softCursor
 elif command -v xpra &> /dev/null; then
     bash $0 --stdir --video --pass /tmp/.X11-unix/ --debug --audio -p Xpra &
 elif command -v Xnest &> /dev/null; then
