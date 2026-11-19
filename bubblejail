@@ -69,11 +69,11 @@ for ((i=1 ; i<=$# ; i++ )); do
                     program2="$HOME/.config/bubblejail/sandbox/$program2"
                 else
                     echo "Program ${program2} does not exist"
-                    exit 1
+                    #exit 1
                 fi
                 if [ ! -x "$program2" ]; then
                     echo "$program2 is not executable. Change the permissions."
-                    exit 1
+                    #exit 1
                 fi
                 if [[ "${program:$((${#program}-1)):1}" == "/" ]]; then
                     program="${program[-1]}"
@@ -101,8 +101,8 @@ for ((i=1 ; i<=$# ; i++ )); do
                 cmd=" --tmpfs $new_home$cmd"
             elif [ "$box" != "" ]; then
                 cmd=" ${box}${cmd}"
-            else
-                cmd=" --tmpfs $new_home$cmd"
+            #else
+            #    cmd=" --tmpfs $new_home$cmd"
             fi
 
             if [ ${#copy} -gt 0 ]; then
@@ -271,10 +271,10 @@ bubblejail is created by helpme970"
             elif [[ "$XDG_SESSION_TYPE" == "x11" && -e "/tmp/.X11-unix/" && "$DISPLAY" != "" ]]; then
                 ((i++))
                 if [[ "${!i}" == *":"* ]]; then
-                    cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i/:/} /tmp/.X11-unix/X${!i/:/}"
+                    cmd="$cmd --setenv XDG_SESSION_TYPE \"x11\" --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i/:/} /tmp/.X11-unix/X${!i/:/}"
                 else
                     ((i--))
-                    cmd="$cmd --setenv DISPLAY \":0\" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
+                    cmd="$cmd --setenv XDG_SESSION_TYPE \"x11\" --setenv DISPLAY \":0\" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
                 fi
             fi
         };;
@@ -282,20 +282,24 @@ bubblejail is created by helpme970"
             cmd="$cmd --setenv SHELL \"$SHELL\"  --setenv TERM \"$TERM\" --setenv COLORTERM \"$COLORTERM\""
         };;
         --wayland) {
-            cmd="$cmd --setenv WAYLAND_DISPLAY \"$WAYLAND_DISPLAY\" --ro-bind \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\" \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""
+            cmd="$cmd --setenv XDG_SESSION_TYPE \"wayland\" --setenv WAYLAND_DISPLAY \"$WAYLAND_DISPLAY\" --ro-bind \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\" \"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""
         };;
         --x11) {
             ((i++))
             if [[ -e /tmp/.X11-unix/X0 ]]; then
                 if [[ "${!i}" == *":"* ]]; then
-                    cmd="$cmd --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i/:/} /tmp/.X11-unix/X${!i/:/}"
+                    cmd="$cmd --setenv XDG_SESSION_TYPE \"x11\" --setenv DISPLAY \"${!i}\" --ro-bind /tmp/.X11-unix/X${!i/:/} /tmp/.X11-unix/X${!i/:/}"
                 else
                     i=$((i-1))
-                    cmd="$cmd --setenv DISPLAY \":0\" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
+                    cmd="$cmd --setenv XDG_SESSION_TYPE \"x11\" --setenv DISPLAY \":0\" --ro-bind /tmp/.X11-unix/X0 /tmp/.X11-unix/X0"
                 fi
             else
                 echo "X11 not running, cannot be used as compositor"
                 exit 1
+            fi
+
+            if [[ "$XAUTHORITY" != "" ]]; then
+                cmd="$cmd --setenv XAUTHORITY $XAUTHORITY --ro-bind $XAUTHORITY $XAUTHORITY"
             fi
         };;
         --x11-sandbox) {
@@ -318,6 +322,9 @@ bubblejail is created by helpme970"
             # Pipewire
             if [[ -e "$XDG_RUNTIME_DIR/pipewire-0" ]]; then
                 cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\""
+
+                # PulseAudio socket, because its using pipewire
+                cmd="$cmd --ro-bind-try \"$XDG_RUNTIME_DIR/pulse/native\" \"$XDG_RUNTIME_DIR/pulse/native\""
 
 
             # PulseAudio
@@ -367,10 +374,10 @@ bubblejail is created by helpme970"
             cmd="$cmd --dev-bind /dev/v4l /dev/v4l --dev-bind /dev/video0 /dev/video0"
         };;
         --stdir) {
-            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --bind $HOME/.config/bubblejail/tmp /etc/hostname --chmod 000 /etc/hostname --bind $HOME/.config/bubblejail/tmp /etc/os-release --chmod 000 /etc/os-release --bind $HOME/.config/bubblejail/tmp /etc/shadow --chmod 000 /etc/shadow --bind $HOME/.config/bubblejail/tmp /etc/shadow- --chmod 000 /etc/shadow- --bind $HOME/.config/bubblejail/tmp /usr/lib/os-release --chmod 000 /usr/lib/os-release --bind $HOME/.config/bubblejail/tmp /var/lib/dbus/machine-id --chmod 000 /var/lib/dbus/machine-id --bind $HOME/.config/bubblejail/tmp /etc/machine-id --chmod 000 /etc/machine-id --tmpfs /usr/src --chmod 000 /usr/src --tmpfs /usr/lib/modules --chmod 000 /usr/lib/modules" # --tmpfs /usr/lib/gcc
+            cmd="$cmd --ro-bind /usr /usr --symlink /usr/bin /bin --symlink /usr/lib /lib --symlink /usr/lib64 /lib64 --symlink /usr/sbin /sbin --ro-bind /etc /etc --ro-bind-try /opt /opt --proc /proc --dev /dev --tmpfs /tmp --bind $HOME/.config/bubblejail/tmp /etc/hostname --chmod 000 /etc/hostname  --bind $HOME/.config/bubblejail/tmp /var/lib/dbus/machine-id --chmod 000 /var/lib/dbus/machine-id --bind $HOME/.config/bubblejail/tmp /etc/machine-id --chmod 000 /etc/machine-id --tmpfs /usr/src --chmod 000 /usr/src --tmpfs /usr/lib/modules --chmod 000 /usr/lib/modules --bind $HOME/.config/bubblejail/tmp /etc/shadow --chmod 000 /etc/shadow --bind $HOME/.config/bubblejail/tmp /etc/shadow- --chmod 000 /etc/shadow- --bind $HOME/.config/bubblejail/tmp /usr/lib/os-release --chmod 000 /usr/lib/os-release" # --tmpfs /usr/lib/gcc --symlink /usr/lib/os-release /etc/os-release --chmod 000 /etc/os-release
         };;
         --noseccomp) {
-            # May improve performance (https://github.com/flatpak/flatpak/issues/4187) but will open CVE-2017-5226 (https://github.com/containers/bubblewrap/issues/142)
+            # May improve performance slightly (https://github.com/flatpak/flatpak/issues/4187) but will open CVE-2017-5226 (https://github.com/containers/bubblewrap/issues/142)
             cmd="${cmd//--new-session/}"
         };;
         --input) {
