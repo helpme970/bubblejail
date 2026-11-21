@@ -422,12 +422,12 @@ bubblejail is created by helpme970"
         };;
         --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try|--bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
             ((i++))
-            arg2="${!i}"
-            arg3="${!i}"
+            arg2="${!i}" # permissions such as rwxrwxrwx
+            arg3="${!i}" # path
             chmod=""
 
             ((i++))
-            arg4=${!i}
+            arg4=${!i} # second path if example:example2:rwxrwxrwx is used
 
             # if a change permissions argument is given
             if [[ ${#arg2} -gt 10 && "${arg2:$((${#arg2} - 4)):1}" == ":" || "${arg2:$((${#arg2} - 6)):1}" == ":" || "${arg2:$((${#arg2} - 10)):1}" == ":" || "${arg2:$((${#arg2} - 3)):1}" == ":" || "${arg2:$((${#arg2} - 2)):1}" == ":" ]]; then
