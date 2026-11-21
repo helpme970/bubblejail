@@ -90,10 +90,6 @@ for ((i=1 ; i<=$# ; i++ )); do
                 programname="$program"
             fi
 
-            if [ $userns = false ]; then
-                cmd="$cmd --disable-userns --assert-userns-disabled"
-            fi
-
             if [ "$virt_home" != "" ]; then
                 mkdir -p "$HOME/.config/bubblejail/sandbox/$programname$new_home"
                 cmd=" --bind ~/.config/bubblejail/sandbox/$programname /$cmd"
@@ -200,7 +196,11 @@ for ((i=1 ; i<=$# ; i++ )); do
             else
                 # --as-pid-1
                 # PID 1 is the init system, e.g. systemd
-                cmd="./bwrap --die-with-parent --unshare-user --unshare-cgroup --unshare-pid --unshare-uts --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\"$cmd"
+                tmp="./bwrap --die-with-parent --unshare-user --unshare-cgroup --unshare-pid --unshare-uts --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\""
+                if [ $userns = false ]; then
+                    tmp="$tmp --disable-userns --assert-userns-disabled"
+                fi
+                cmd="$tmp$cmd"
             fi
 
             break
@@ -421,6 +421,117 @@ bubblejail is created by helpme970"
             box="--bind $HOME/.config/bubblejail/sandbox/${!i} /"
         };;
         --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try|--bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
+            ((i++))
+            arg2="${!i}"
+            arg3="${!i}"
+            chmod=""
+
+            ((i++))
+            arg4=${!i}
+
+            # if a change permissions argument is given
+            if [[ ${#arg2} -gt 10 && "${arg2:$((${#arg2} - 4)):1}" == ":" || "${arg2:$((${#arg2} - 6)):1}" == ":" || "${arg2:$((${#arg2} - 10)):1}" == ":" || "${arg2:$((${#arg2} - 3)):1}" == ":" || "${arg2:$((${#arg2} - 2)):1}" == ":" ]]; then
+                array=()
+                IFS=':' read -r -a array <<< "$arg2"
+
+                if [[ ${#array[@]} -gt 2 ]]; then  # example: --pass ./example:./example2:rwxrwxrwx
+                    arg3="${array[0]}"
+                    arg4="${array[1]}" # TODO
+                    ((i--))
+                    arg2=${array[2]}
+                    arg="--bind"
+                else                            # example: --pass ./example:rwxrwxrwx
+                    arg3=${array[0]}
+                    arg2=${array[1]}
+                fi
+
+                if [[ ${#arg2} == 3 && $arg2 =~ ^[0-9]+$ ]]; then
+                    chmod="--chmod $arg2"
+                else
+                    if [ ${#arg2} == 5 ]; then # "--pass example:a+rwx" gets converted to "--pass example:rwxrwxrwx"
+                        echo test
+                        if [ "${arg2:0:1}" == "a" ]; then
+                            arg2="${arg2:2}${arg2:2}${arg2:2}"
+                        elif [ "${arg2:0:1}" == "g" ]; then
+                            arg2="---${arg2:2}${arg2:2}"
+                        elif [ "${arg2:0:1}" == "u" ]; then
+                            arg2="------${arg2:2}"
+                        else
+                            echo "Error"
+                            exit 1
+                        fi
+
+                        case "$arg" in
+                            --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try) {     
+                                arg="--pass"
+                            };;
+                            --bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
+                                arg="--bind"
+                            };;
+                        esac
+                    elif [ ${#arg2} -lt 3 ]; then
+                        echo test
+                        if [ "${arg2}" == "rw" ]; then # --pass example:rw
+                            case "$arg" in
+                                --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try) {     
+                                    arg="--pass"
+                                };;
+                                --bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
+                                    arg="--bind"
+                                };;
+                            esac
+                        
+                            arg2=""
+                        elif [ "${arg2}" == "r" ]; then # --pass example:r
+                            case "$arg" in
+                                --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try) {     
+                                    arg="--ro-pass"
+                                };;
+                                --bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
+                                    arg="--ro-bind"
+                                };;
+                            esac
+                            
+                            arg2=""
+                        else
+                            echo "Error"
+                            exit 1
+                        fi
+                    fi
+
+                    if [[ "$arg2" != "" ]]; then
+                        chmod=""
+                        tmp=0
+                        special=0
+                        for ((l=0; l<=${#arg2}-1; l++)); do
+                            if [ "${arg2:l:1}" == "x" ]; then
+                                tmp=$((tmp + 1))
+                            elif [ "${arg2:l:1}" == "w" ]; then
+                                tmp=$((tmp + 2))
+                            elif [ "${arg2:l:1}" == "r" ]; then
+                                tmp=$((tmp + 4))
+                            elif [[ "${arg2:l:1}" == "s" && $l == 2 ]]; then
+                                special=$((special + 4))
+                            elif [[ "${arg2:l:1}" == "s" && $l == 5 ]]; then
+                                special=$((special + 2))
+                            elif [[ "${arg2:l:1}" == "t" && $l == 8 ]]; then
+                                special=$((special + 1))
+                            elif [ "${arg2:l:1}" == "-" ]; then
+                                :
+                            else
+                                echo "Error: chmod cannot be used with these parameters"
+                                exit 1
+                            fi
+                            if [[ $l == 2 || $l == 5 || $l == 8 ]]; then
+                                chmod="${chmod}${tmp}"
+                                tmp=0
+                            fi
+                        done
+                        chmod="--chmod $chmod"
+                    fi
+                fi
+            fi
+
             case $arg in
                 --pass|--bind) {
                     cmd="$cmd --bind"
@@ -441,71 +552,6 @@ bubblejail is created by helpme970"
                     cmd="$cmd --dev-bind-try"
                 };;
             esac
-            ((i++))
-            arg2="${!i}"
-            arg3="${!i}"
-            chmod=""
-            if [[ ${#arg2} -gt 10 && "${arg2:$((${#arg2} - 4)):1}" == ":" || "${arg2:$((${#arg2} - 6)):1}" == ":" || "${arg2:$((${#arg2} - 10)):1}" == ":" ]]; then
-                if [[ "${arg2:$((${#arg2} - 4)):1}" == ":" ]]; then
-                    arg3="${!i//${arg2:$((${#arg2} - 4))}/}"
-                    arg2="${arg2:$((${#arg2} - 3))}"
-                elif [[ "${arg2:$((${#arg2} - 6)):1}" == ":" ]]; then
-                    arg3="${!i//${arg2:$((${#arg2} - 6))}/}"
-                    arg2="${arg2:$((${#arg2} - 5))}"
-                elif [[ "${arg2:$((${#arg2} - 10)):1}" == ":" ]]; then
-                    arg3="${!i//${arg2:$((${#arg2} - 10))}/}"
-                    arg2="${arg2:$((${#arg2} - 9))}"
-                else
-                    echo "Error"
-                    exit 1
-                fi
-                if [[ ${#arg2} == 3 && $arg2 =~ ^[0-9]+$ ]]; then
-                    chmod="--chmod $arg2"
-                elif [[ ${#arg2} == 9 || ${#arg2} == 5 ]]; then
-                    if [ ${#arg2} == 5 ]; then
-                        echo test
-                        if [ "${arg2:0:1}" == "a" ]; then
-                            arg2="${arg2:2}${arg2:2}${arg2:2}"
-                        elif [ "${arg2:0:1}" == "g" ]; then
-                            arg2="---${arg2:2}${arg2:2}"
-                        elif [ "${arg2:0:1}" == "u" ]; then
-                            arg2="------${arg2:2}"
-                        else
-                            echo "Error"
-                            exit 1
-                        fi
-                    fi
-
-                    chmod=""
-                    tmp=0
-                    special=0
-                    for ((l=0; l<=${#arg2}-1; l++)); do
-                        if [ "${arg2:l:1}" == "x" ]; then
-                            tmp=$((tmp + 1))
-                        elif [ "${arg2:l:1}" == "w" ]; then
-                            tmp=$((tmp + 2))
-                        elif [ "${arg2:l:1}" == "r" ]; then
-                            tmp=$((tmp + 4))
-                        elif [[ "${arg2:l:1}" == "s" && $l == 2 ]]; then
-                            special=$((special + 4))
-                        elif [[ "${arg2:l:1}" == "s" && $l == 5 ]]; then
-                            special=$((special + 2))
-                        elif [[ "${arg2:l:1}" == "t" && $l == 8 ]]; then
-                            special=$((special + 1))
-                        elif [ "${arg2:l:1}" == "-" ]; then
-                            :
-                        else
-                            echo "Error: chmod cannot be used with these parameters"
-                            exit 1
-                        fi
-                        if [[ $l == 2 || $l == 5 || $l == 8 ]]; then
-                            chmod="${chmod}${tmp}"
-                            tmp=0
-                        fi
-                    done
-                    chmod="--chmod $chmod"
-                fi
-            fi
 
             case "$arg" in
                 --pass|--ro-pass|--dev-pass|--bind|--ro-bind|--dev-bind) {
@@ -535,11 +581,10 @@ bubblejail is created by helpme970"
                 };;
                 --bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
                     cmd="$cmd \"${tmp}\""
-                    ((i++))
                     if [[ "$chmod" != "" ]]; then
-                        cmd="$cmd \"${!i}\" ${chmod} \"${!i}\""
+                        cmd="$cmd \"${arg4}\" ${chmod} \"${arg4}\""
                     else
-                        cmd="$cmd \"${!i}\""
+                        cmd="$cmd \"${arg4}\""
                     fi
                 };;
             esac
@@ -556,7 +601,7 @@ bubblejail is created by helpme970"
                     exit 1
                 fi
             fi
-            copy="$copy${tmp};"
+            copy="${copy}${tmp};"
         };;
         --tmpfs|--tmp) {
             cmd="$cmd --tmpfs"
