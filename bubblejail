@@ -39,7 +39,7 @@ for ((i=1 ; i<=$# ; i++ )); do
             if [[ $user == "root" ]]; then
                 new_home="/root"
                 cmd="$cmd --setenv HOME /root"
-            else #if [[ $user == "nobody" || $user == "$USER" || $user == "user" ]]; then
+            elif [[ $user == "nobody" || $user == "$USER" || $user == "user" ]]; then
                 new_home="/home/$user"
                 cmd="$cmd --setenv HOME /home/$user"
             fi
@@ -298,6 +298,8 @@ bubblejail is created by helpme970"
                 exit 1
             fi
 
+            # pass XAUTHORITY for authentication
+            # fixes issues such as "Authorization required, but no authorization protocol specified"
             if [[ "$XAUTHORITY" != "" ]]; then
                 cmd="$cmd --setenv XAUTHORITY $XAUTHORITY --ro-bind $XAUTHORITY $XAUTHORITY"
             fi
@@ -345,7 +347,7 @@ bubblejail is created by helpme970"
             fi
         };;
         --gpu) {
-            cmd="$cmd --dev-bind /dev/dri /dev/dri --ro-bind /sys/devices /sys/devices" # --ro-bind /sys /sys"
+            cmd="$cmd --dev-bind /dev/dri /dev/dri --ro-bind /sys/devices /sys/devices"
 
             # Nvidia specific paths
             if [[ -e "/dev/nvidia-modeset" ]]; then
@@ -424,20 +426,21 @@ bubblejail is created by helpme970"
             ((i++))
             arg2="${!i}" # permissions such as rwxrwxrwx
             arg3="${!i}" # path
-            chmod=""
+            chmod="" # string that contains octal form of file-permissons
 
             ((i++))
             arg4=${!i} # second path if example:example2:rwxrwxrwx is used
+            ((i--))
 
             # if a change permissions argument is given
-            if [[ ${#arg2} -gt 10 && "${arg2:$((${#arg2} - 4)):1}" == ":" || "${arg2:$((${#arg2} - 6)):1}" == ":" || "${arg2:$((${#arg2} - 10)):1}" == ":" || "${arg2:$((${#arg2} - 3)):1}" == ":" || "${arg2:$((${#arg2} - 2)):1}" == ":" ]]; then
+            if [[ ${#arg2} -gt 10 && "$arg2" =~ ":" ]]; then # "${arg2:$((${#arg2} - 4)):1}" == ":" || "${arg2:$((${#arg2} - 6)):1}" == ":" || "${arg2:$((${#arg2} - 10)):1}" == ":" || "${arg2:$((${#arg2} - 3)):1}" == ":" || "${arg2:$((${#arg2} - 2)):1}" == ":"
                 array=()
                 IFS=':' read -r -a array <<< "$arg2"
 
                 if [[ ${#array[@]} -gt 2 ]]; then  # example: --pass ./example:./example2:rwxrwxrwx
                     arg3="${array[0]}"
                     arg4="${array[1]}" # TODO
-                    ((i--))
+                    
                     arg2=${array[2]}
                     arg="--bind"
                 else                            # example: --pass ./example:rwxrwxrwx
@@ -499,22 +502,22 @@ bubblejail is created by helpme970"
                         fi
                     fi
 
+                    # convertf file-permission from text to octal form; frorm rwxrwxrwx to 0777
                     if [[ "$arg2" != "" ]]; then
-                        chmod=""
-                        tmp=0
-                        special=0
+                        tmp=0 # stores file-permission
+                        special=0 # stores special file permission such as sticky-bit etc
                         for ((l=0; l<=${#arg2}-1; l++)); do
-                            if [ "${arg2:l:1}" == "x" ]; then
+                            if [ "${arg2:l:1}" == "x" ]; then                   # execute
                                 tmp=$((tmp + 1))
-                            elif [ "${arg2:l:1}" == "w" ]; then
+                            elif [ "${arg2:l:1}" == "w" ]; then                 # write
                                 tmp=$((tmp + 2))
-                            elif [ "${arg2:l:1}" == "r" ]; then
+                            elif [ "${arg2:l:1}" == "r" ]; then                 # read
                                 tmp=$((tmp + 4))
-                            elif [[ "${arg2:l:1}" == "s" && $l == 2 ]]; then
+                            elif [[ "${arg2:l:1}" == "s" && $l == 2 ]]; then    # SUID-Bit, S = true, s = false
                                 special=$((special + 4))
-                            elif [[ "${arg2:l:1}" == "s" && $l == 5 ]]; then
+                            elif [[ "${arg2:l:1}" == "s" && $l == 5 ]]; then    # SGID-Bit, S = true, s = false
                                 special=$((special + 2))
-                            elif [[ "${arg2:l:1}" == "t" && $l == 8 ]]; then
+                            elif [[ "${arg2:l:1}" == "t" && $l == 8 ]]; then    # Sticky-Bit, t = true, T = false
                                 special=$((special + 1))
                             elif [ "${arg2:l:1}" == "-" ]; then
                                 :
@@ -522,11 +525,18 @@ bubblejail is created by helpme970"
                                 echo "Error: chmod cannot be used with these parameters"
                                 exit 1
                             fi
+
+                            # reset tmp for next user/group/all
                             if [[ $l == 2 || $l == 5 || $l == 8 ]]; then
                                 chmod="${chmod}${tmp}"
                                 tmp=0
                             fi
                         done
+
+                        # add special bits
+                        if [[ $special -gt 0 ]]; then
+                            chmod="${special}${chmod}"
+                        fi
                         chmod="--chmod $chmod"
                     fi
                 fi
@@ -580,6 +590,7 @@ bubblejail is created by helpme970"
                     fi       
                 };;
                 --bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
+                    ((i++))
                     cmd="$cmd \"${tmp}\""
                     if [[ "$chmod" != "" ]]; then
                         cmd="$cmd \"${arg4}\" ${chmod} \"${arg4}\""
