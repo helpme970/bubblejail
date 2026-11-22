@@ -2,6 +2,29 @@
 
 set -euo pipefail
 
+resolve_path() {
+    local tmp
+    tmp="$(readlink -f "${1}")" || {
+        echo "1"
+        exit 1
+    }
+    if [[ -e "$tmp" ]]; then
+        echo "$tmp"
+        exit
+    elif [[ ! -e "$tmp" || "$tmp" == "" ]]; then
+        if [ -e "${1}" ]; then
+            :
+            #$1="${$1}"
+        elif [ ! -e "${1}" ]; then
+            echo "1"
+            exit 1
+        fi
+    else
+        echo "1"
+        exit 1
+    fi
+}
+
 # Exit if no argument is given
 if [ $# -eq 0 ]; then
     echo "Bitte übergib den Programmnamen oder den Pfad zur Datei als Parameter"
@@ -565,33 +588,28 @@ bubblejail is created by helpme970"
 
             case "$arg" in
                 --pass|--ro-pass|--dev-pass|--bind|--ro-bind|--dev-bind) {
-                    tmp="$(readlink -f "${arg3}")"
-                    if [ -e "$tmp" ]; then
-                        :
-                    elif [ ! -e "$(readlink -f "${arg3}")" ]; then
-                        if [ -e "${arg3}" ]; then
-                            tmp="${arg3}"
-                        elif [ ! -e "${arg3}" ]; then
-                            echo "File ${arg3} does not exist"
-                            exit 1
-                        fi
-                    fi
+                    tmp="$(resolve_path "$arg3")" || {
+                        echo "Error resolving path ${arg3}"
+                        exit 1
+                    }
+                    arg3="$tmp"
                 };;
                 *) {
-                    tmp="${arg3}"
+                    :
                 };;
             esac
+
             case "$arg" in
                 --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try) {     
                     if [[ "$chmod" != "" ]]; then
-                        cmd="$cmd \"${tmp}\" \"${tmp}\" ${chmod} \"${tmp}\""
+                        cmd="$cmd \"${arg3}\" \"${arg3}\" ${chmod} \"${arg3}\""
                     else
-                        cmd="$cmd \"${tmp}\" \"${tmp}\""
+                        cmd="$cmd \"${arg3}\" \"${arg3}\""
                     fi       
                 };;
                 --bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
                     ((i++))
-                    cmd="$cmd \"${tmp}\""
+                    cmd="$cmd \"${arg3}\""
                     if [[ "$chmod" != "" ]]; then
                         cmd="$cmd \"${arg4}\" ${chmod} \"${arg4}\""
                     else
@@ -602,16 +620,10 @@ bubblejail is created by helpme970"
         };;
         --clone|--copy) {
             ((i++))
-            if [ -e "$(readlink -f ${!i})" ]; then
-                tmp="$(readlink -f ${!i})"
-            elif [ ! -e "$(readlink -f ${!i})" ]; then
-                if [ -e "${!i}" ]; then
-                    tmp="${!i}"
-                elif [ ! -e "${!i}" ]; then
-                    echo "File ${!i} does not exist"
-                    exit 1
-                fi
-            fi
+            tmp="$(resolve_path "${!i}")" || {
+                echo "Error resolving path ${arg3}"
+                exit 1
+            }
             copy="${copy}${tmp};"
         };;
         --tmpfs|--tmp) {
@@ -656,16 +668,10 @@ bubblejail is created by helpme970"
 
         --chdir) {
             ((i++))
-            if [ -e "$(readlink -f ${!i})" ]; then
-                tmp="$(readlink -f ${!i})"
-            elif [ ! -e "$(readlink -f ${!i})" ]; then
-                if [ -e "${!i}" ]; then
-                    tmp="${!i}"
-                elif [ ! -e "${!i}" ]; then
-                    echo "File ${!i} does not exist"
-                    exit 1
-                fi
-            fi
+            tmp="$(resolve_path "${!i}")" || {
+                echo "Error resolving path ${arg3}"
+                exit 1
+            }
             chdir="$tmp"
             cmd="$cmd --chdir \"$tmp\""
         };;
