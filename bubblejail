@@ -181,7 +181,7 @@ for ((i=1 ; i<=$# ; i++ )); do
             ################
             # program name #
             ################
-            if [[ $programname = *".appimage"* || $programname = *".Appimage"* || $programname = *".AppImage"* ]]; then
+            if [[ $programname == *".appimage"* || $programname == *".Appimage"* || $programname == *".AppImage"* ]]; then
                 if [ -e "$path/squashfs-root" ]; then
                     echo "$path/squashfs-root already exists, please remove it to continue"
                     exit 1
@@ -220,13 +220,12 @@ for ((i=1 ; i<=$# ; i++ )); do
                 # --as-pid-1
                 # PID 1 is the init system, e.g. systemd
                 tmp="./bwrap --die-with-parent --unshare-user --unshare-cgroup --unshare-pid --unshare-uts --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\""
-                if [ $userns = false ]; then
+                if [ $userns == false ]; then
                     tmp="$tmp --disable-userns --assert-userns-disabled"
                 fi
                 cmd="$tmp$cmd"
             fi
 
-            break
             break
         };;
         -d|--debug) {
