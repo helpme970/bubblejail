@@ -39,15 +39,15 @@ if [[ ! -f $HOME/.config/bubblejail/tmp ]]; then
     echo "" > "$HOME/.config/bubblejail/tmp"
 fi
 
-cmd=" --new-session --unshare-net --unshare-ipc"
+cmd=" --new-session --unshare-net --unshare-ipc --disable-userns --assert-userns-disabled"
 user="user" # option to change username in sandbox, maybe in the future
 #user="$USER"
 debug=false
 xsession=""
-virt_home=""
+# virt_home=""
 tmp_home=""
 box=""
-userns=false
+# userns=false
 copy=""
 dbus=""
 chdir=""
@@ -65,20 +65,23 @@ for ((i=1 ; i<=$# ; i++ )); do
             elif [[ $user == "nobody" || $user == "$USER" || $user == "user" ]]; then
                 new_home="/home/$user"
                 cmd="$cmd --setenv HOME /home/$user"
+            else
+                echo "Error creating variable new_home"
+                exit 1
             fi
 
             cmd="$cmd --setenv XDG_CONFIG_HOME $new_home/.config"
 
             ((i++))
             program="${!i}"
-            box2=""
-            if [[ "$box" != "" && "$program" == *"/"* ]]; then
-                box2="${box//--bind /}"
-                box2="${box2// \//}"
-            fi
+            # box2=""
+            # if [[ "$box" != "" && "$program" == *"/"* ]]; then
+            #     box2="${box//--bind /}"
+            #     box2="${box2// \//}"
+            # fi
 
-            if [[ -e "${box2}${chdir}${program}" ]]; then
-                program2="${box2}${chdir}${program}"
+            if [[ -e "${box}${chdir}${program}" ]]; then
+                program2="${box}${chdir}${program}"
             else
                 program2="${program}"
             fi
@@ -113,14 +116,17 @@ for ((i=1 ; i<=$# ; i++ )); do
                 programname="$program"
             fi
 
-            if [ "$virt_home" != "" ]; then
-                mkdir -p "$HOME/.config/bubblejail/sandbox/$programname$new_home"
-                cmd=" --bind ~/.config/bubblejail/sandbox/$programname /$cmd"
-            elif [ "$tmp_home" != "" ]; then
+            # virt home and box are exactly the same
+            # if [ "$virt_home" != "" ]; then
+            #     mkdir -p "$HOME/.config/bubblejail/sandbox/$programname$new_home"
+            #     cmd=" --bind ~/.config/bubblejail/sandbox/$programname /$cmd"
+            # el
+            if [ "$tmp_home" != "" ]; then
                 cmd=" --tmpfs $new_home$cmd"
             elif [ "$box" != "" ]; then
-                cmd=" ${box}${cmd}"
-            #else
+                cmd=" --bind ${box} /${cmd}"
+            else
+                echo "No home created"
             #    cmd=" --tmpfs $new_home$cmd"
             fi
 
@@ -220,9 +226,9 @@ for ((i=1 ; i<=$# ; i++ )); do
                 # --as-pid-1
                 # PID 1 is the init system, e.g. systemd
                 tmp="./bwrap --die-with-parent --unshare-user --unshare-cgroup --unshare-pid --unshare-uts --clearenv --hostname localhost --setenv XDG_RUNTIME_DIR $XDG_RUNTIME_DIR --setenv XDG_CACHE_HOME \"$new_home/.cache\""
-                if [ $userns == false ]; then
-                    tmp="$tmp --disable-userns --assert-userns-disabled"
-                fi
+                # if [ $userns == false ]; then
+                #     tmp="$tmp --disable-userns --assert-userns-disabled"
+                # fi
                 cmd="$tmp$cmd"
             fi
 
@@ -253,7 +259,6 @@ for ((i=1 ; i<=$# ; i++ )); do
 --root                              Run the sandbox as UID 0.
 --nobody                            Run as UID 65534 (the 'nobody' user).
 --current-user                      Use the invoking user’s UID (default).
---virt-home                         Use a persistent empty home directory.
 --tmp-home                          Use a temporary home that is removed on exit.
 --box <name>                        Create an isolated root for multiple programs under name.
 --pass <SRC>                        Bind SRC to the same path inside the sandbox (read‑write).
@@ -402,20 +407,21 @@ bubblejail is created by helpme970"
         };;
         --noseccomp) {
             # May improve performance slightly (https://github.com/flatpak/flatpak/issues/4187) but will open CVE-2017-5226 (https://github.com/containers/bubblewrap/issues/142)
-            cmd="${cmd//--new-session/}"
+            cmd="${cmd// --new-session/}"
         };;
         --input) {
             cmd="$cmd --dev-bind /dev/input /dev/input"
         };;
         --enable-userns|--share-userns) {
-            userns=true           
+            cmd="${cmd// --disable-userns --assert-userns-disabled/}"
+            # userns=true           
         };;
         --net|--share-net|--network) {
-            cmd="${cmd//--unshare-net/}"
+            cmd="${cmd// --unshare-net/}"
             cmd="$cmd --share-net --ro-bind-try /run/systemd/resolve /run/systemd/resolve"
         };;
         --share-ipc) {
-            cmd="${cmd//--unshare-ipc/}"
+            cmd="${cmd// --unshare-ipc/}"
         };;
         --root) {
             cmd="$cmd --uid 0"
@@ -428,21 +434,22 @@ bubblejail is created by helpme970"
         --current-user) {
             user="$USER"
         };;
-        --virt-home) {
-            virt_home=" "
-        };;
+        # --virt-home) {
+        #     virt_home=" "
+        # };;
         --tmp-home) {
             tmp_home=" "
         };;
         --box) {
             ((i++))
             if [ -e "$HOME/.config/bubblejail/sandbox/${!i}" ]; then
-                tmp="${!i}"
+                :
+                # tmp="${!i}"
             elif [ ! -e "$HOME/.config/bubblejail/sandbox/${!i}" ]; then
                 mkdir -p "$HOME/.config/bubblejail/sandbox/${!i}"
                 echo "Created new box ${!i}"
             fi
-            box="--bind $HOME/.config/bubblejail/sandbox/${!i} /"
+            box="$HOME/.config/bubblejail/sandbox/${!i}"
         };;
         --pass|--ro-pass|--dev-pass|--pass-try|--ro-pass-try|--dev-pass-try|--bind|--ro-bind|--dev-bind|--bind-try|--ro-bind-try|--dev-bind-try) {
             ((i++))
@@ -823,4 +830,4 @@ if [ -e "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$xdg.sock" ]; then
     rm -f "$XDG_RUNTIME_DIR/xdg-dbus-proxy/$xdg.sock"
 fi
 
-pkill -P $$
+# pkill -P $$
